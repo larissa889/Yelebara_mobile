@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:yelebara_mobile/screens/Admin/AdminHomePage.dart';
 import 'package:yelebara_mobile/screens/BeneficiairePage.dart';
 import 'package:yelebara_mobile/screens/Client/ClientHomePage.dart';
 import 'package:yelebara_mobile/screens/RegisterPage.dart';
+import 'package:yelebara_mobile/screens/ForgotPasswordPage.dart';
+import 'package:yelebara_mobile/services/AuthService.dart';
 
 class YelebaraApp extends StatelessWidget {
   const YelebaraApp({Key? key}) : super(key: key);
@@ -35,6 +39,8 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  final AuthService _authService = AuthService();
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -42,43 +48,15 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // Fonction pour simuler l'authentification et récupérer le rôle
+  // Authentification réelle via API
   Future<Map<String, dynamic>> _authenticateUser(String email, String password) async {
-    // Simuler un délai d'authentification
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // TODO: Remplacer par un vrai appel API
-    // Simulation basée sur l'email pour démonstration
-    if (email.contains('admin')) {
-      return {
-        'success': true,
-        'role': 'admin',
-        'userName': 'Administrateur',
-        'userId': '1',
-      };
-    } else if (email.contains('beneficiaire') || email.contains('beneficiary')) {
-      return {
-        'success': true,
-        'role': 'beneficiaire',
-        'userName': 'Bénéficiaire',
-        'userId': '2',
-      };
-    } else if (email.contains('client')) {
-      return {
-        'success': true,
-        'role': 'client',
-        'userName': 'Client',
-        'userId': '3',
-      };
-    } else {
-      // Par défaut, considérer comme client
-      return {
-        'success': true,
-        'role': 'client',
-        'userName': 'Utilisateur',
-        'userId': '4',
-      };
-    }
+    final user = await _authService.login(email, password);
+    return {
+      'success': user != null,
+      'role': user?.role ?? 'client',
+      'userName': user?.email ?? 'Utilisateur',
+      'userId': user?.id ?? '0',
+    };
   }
 
   void _handleLogin() async {
@@ -336,7 +314,12 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // Navigation vers récupération mot de passe
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ForgotPasswordPage(),
+                                ),
+                              );
                             },
                             child: Text(
                               'Mot de passe oublié ?',
@@ -415,8 +398,25 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // connexion avec Google
+                          onPressed: () async {
+                            try {
+                              final GoogleSignInAccount? account = await GoogleSignIn().signIn();
+                              if (account == null) return; // annulé
+                              final GoogleSignInAuthentication auth = await account.authentication;
+                              final idToken = auth.idToken;
+                              if (idToken == null) throw Exception('ID Token manquant');
+
+                              final user = await _authService.loginWithGoogle(idToken);
+                              if (!mounted) return;
+                              if (user != null) {
+                                _navigateByRole(user.role, user.email);
+                              }
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Google: ${e.toString()}'), backgroundColor: Colors.red),
+                              );
+                            }
                           },
                           icon: const Icon(Icons.g_mobiledata, size: 28),
                           label: Text(
@@ -438,8 +438,26 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () {
-                            // connexion avec Facebook
+                          onPressed: () async {
+                            try {
+                              final LoginResult result = await FacebookAuth.instance.login();
+                              if (result.status != LoginStatus.success) {
+                                throw Exception(result.message ?? 'Échec Facebook');
+                              }
+                              final accessToken = result.accessToken?.token;
+                              if (accessToken == null) throw Exception('Access token manquant');
+
+                              final user = await _authService.loginWithFacebook(accessToken);
+                              if (!mounted) return;
+                              if (user != null) {
+                                _navigateByRole(user.role, user.email);
+                              }
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Facebook: ${e.toString()}'), backgroundColor: Colors.red),
+                              );
+                            }
                           },
                           icon: const Icon(Icons.facebook, size: 24),
                           label: Text(
@@ -502,6 +520,26 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _navigateByRole(String role, String userName) {
+    Widget destinationPage;
+    switch (role) {
+      case 'admin':
+        destinationPage = AdminHomePage(confirmationMessage: 'Bienvenue $userName !');
+        break;
+      case 'beneficiaire':
+        destinationPage = BeneficiaryHomePage(confirmationMessage: 'Bienvenue $userName !');
+        break;
+      case 'client':
+      default:
+        destinationPage = ClientHomePage(confirmationMessage: 'Bienvenue $userName !');
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => destinationPage),
     );
   }
 }

@@ -56,4 +56,73 @@ class AuthService {
       throw Exception('Erreur de déconnexion : $e');
     }
   }
+
+  // 🟠 Demander la réinitialisation du mot de passe (envoi d'email)
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/forgot-password'),
+        headers: {'Accept': 'application/json'},
+        body: {'email': email},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Impossible d\'envoyer le lien de réinitialisation');
+      }
+    } catch (e) {
+      throw Exception('Erreur demande reset: $e');
+    }
+  }
+
+  // 🟢 Connexion via Google (échange du token côté backend)
+  Future<User?> loginWithGoogle(String idToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login/google'),
+        headers: {'Accept': 'application/json'},
+        body: {
+          'id_token': idToken,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['user'] != null) {
+          return User.fromJson(data['user']);
+        } else {
+          throw Exception('Utilisateur non trouvé dans la réponse');
+        }
+      } else {
+        throw Exception('Erreur Google (${response.statusCode})');
+      }
+    } catch (e) {
+      throw Exception('Erreur connexion Google: $e');
+    }
+  }
+
+  // 🟢 Connexion via Facebook (échange du token côté backend)
+  Future<User?> loginWithFacebook(String accessToken) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login/facebook'),
+        headers: {'Accept': 'application/json'},
+        body: {
+          'access_token': accessToken,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['user'] != null) {
+          return User.fromJson(data['user']);
+        } else {
+          throw Exception('Utilisateur non trouvé dans la réponse');
+        }
+      } else {
+        throw Exception('Erreur Facebook (${response.statusCode})');
+      }
+    } catch (e) {
+      throw Exception('Erreur connexion Facebook: $e');
+    }
+  }
 }
