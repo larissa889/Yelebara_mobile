@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:yelebara_mobile/screens/LoginPage.dart';
+import 'package:yelebara_mobile/Screens/LoginPage.dart';
+import 'package:yelebara_mobile/widgets/YelebaraLogo.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({Key? key}) : super(key: key);
@@ -76,42 +77,10 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                   children: [
                     SizedBox(height: isSmallScreen ? 20 : 40),
                     
-                    // Logo et animation
+                    // Logo YELEBARA
                     FadeTransition(
                       opacity: _fadeAnimation,
-                      child: Container(
-                        width: isSmallScreen ? 140 : 180,
-                        height: isSmallScreen ? 140 : 180,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 30,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.wb_sunny,
-                                size: isSmallScreen ? 60 : 75,
-                                color: Colors.orange.shade400,
-                              ),
-                              SizedBox(height: isSmallScreen ? 4 : 8),
-                              Icon(
-                                Icons.landscape,
-                                size: isSmallScreen ? 35 : 45,
-                                color: Colors.red.shade400,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      child: const Center(child: YelebaraLogo(size: 160)),
                     ),
 
                     SizedBox(height: isSmallScreen ? 20 : 30),
@@ -200,9 +169,8 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                         height: isSmallScreen ? 50 : 56,
                         child: ElevatedButton(
                           onPressed: () {
-                             Navigator.push(
-                              context,
-                               MaterialPageRoute(builder: (context) => LoginPage()),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const LoginPage()),
                             );
                           },
                           style: ElevatedButton.styleFrom(

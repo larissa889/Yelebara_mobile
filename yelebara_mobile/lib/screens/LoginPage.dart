@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:yelebara_mobile/screens/Admin/AdminHomePage.dart';
-import 'package:yelebara_mobile/screens/BeneficiairePage.dart';
-import 'package:yelebara_mobile/screens/Client/ClientHomePage.dart';
-import 'package:yelebara_mobile/screens/RegisterPage.dart';
-import 'package:yelebara_mobile/screens/ForgotPasswordPage.dart';
-import 'package:yelebara_mobile/services/AuthService.dart';
+import 'package:yelebara_mobile/widgets/YelebaraLogo.dart';
+import 'package:yelebara_mobile/Screens/RegisterPage.dart';
+import 'package:yelebara_mobile/Screens/ForgotPasswordPage.dart';
+// Import des pages selon les rôles
+import 'package:yelebara_mobile/Client/ClientHomePage.dart';
+import 'package:yelebara_mobile/Admin/AdminHomePage.dart';
+import 'package:yelebara_mobile/Presseur/PresseurHomePage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class YelebaraApp extends StatelessWidget {
   const YelebaraApp({Key? key}) : super(key: key);
@@ -39,24 +39,11 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
-  final AuthService _authService = AuthService();
-
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  // Authentification réelle via API
-  Future<Map<String, dynamic>> _authenticateUser(String email, String password) async {
-    final user = await _authService.login(email, password);
-    return {
-      'success': user != null,
-      'role': user?.role ?? 'client',
-      'userName': user?.email ?? 'Utilisateur',
-      'userId': user?.id ?? '0',
-    };
   }
 
   void _handleLogin() async {
@@ -65,75 +52,76 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true;
       });
 
-      try {
-        // Authentification
-        final authResult = await _authenticateUser(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+      // Simuler une connexion et récupération du rôle
+      // Dans votre implémentation réelle, vous ferez un appel API ici
+      await Future.delayed(const Duration(seconds: 2));
 
-        if (!mounted) return;
+      // Récupérer d'abord le rôle éventuellement sauvegardé à l'inscription
+      String userRole = await _getStoredOrComputedRole(_emailController.text);
 
-        setState(() {
-          _isLoading = false;
-        });
+      setState(() {
+        _isLoading = false;
+      });
 
-        if (authResult['success']) {
-          final role = authResult['role'];
-          final userName = authResult['userName'];
+      if (!mounted) return;
 
-          // Redirection selon le rôle
-          Widget destinationPage;
-          
-          switch (role) {
-            case 'admin':
-              destinationPage = AdminHomePage(
-                confirmationMessage: 'Bienvenue $userName !',
-              );
-              break;
-            case 'beneficiaire':
-              destinationPage = BeneficiaryHomePage(
-                confirmationMessage: 'Bienvenue $userName !',
-              );
-              break;
-            case 'client':
-              destinationPage = ClientHomePage(
-                confirmationMessage: 'Bienvenue $userName !',
-              );
-              break;
-            default:
-              destinationPage = ClientHomePage(
-                confirmationMessage: 'Bienvenue !',
-              );
-          }
+      // Redirection selon le rôle
+      _navigateByRole(userRole);
+    }
+  }
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => destinationPage),
-          );
-        } else {
-          // Afficher un message d'erreur
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email ou mot de passe incorrect'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
-        
-        if (!mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de connexion: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  Future<String> _getStoredOrComputedRole(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = email.trim().toLowerCase();
+    final stored = prefs.getString('user_role:'+key);
+    if (stored != null && stored.isNotEmpty) {
+      return stored;
+    }
+    // Fallback heuristique si rien n'est stocké
+    if (key.contains('admin')) return 'admin';
+    if (key.contains('presseur') || key.contains('benef')) return 'beneficiaire';
+    return 'client';
+  }
+
+  void _navigateByRole(String role) {
+    Widget destinationPage;
+
+    switch (role.toLowerCase()) {
+      case 'admin':
+        destinationPage = const AdminHomePage();
+        break;
+      case 'presseur':
+        destinationPage = const PresseurHomePage();
+        break;
+      case 'client':
+      default:
+        destinationPage = const ClientHomePage();
+        break;
+    }
+
+    // Navigation avec remplacement pour empêcher le retour à la page de connexion
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => destinationPage),
+    );
+
+    // Afficher un message de succès
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Connexion réussie !'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // Sauvegarder l'email de l'utilisateur connecté pour le profil
+    _saveCurrentUserEmail();
+  }
+
+  Future<void> _saveCurrentUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _emailController.text.trim().toLowerCase();
+    if (key.isNotEmpty) {
+      await prefs.setString('current_user_email', key);
     }
   }
 
@@ -162,28 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(height: isSmallScreen ? 20 : 40),
 
                   // Logo
-                  Center(
-                    child: Container(
-                      width: isSmallScreen ? 100 : 120,
-                      height: isSmallScreen ? 100 : 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/YELEBARA_logo.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Center(child: YelebaraLogo(size: 120)),
 
                   SizedBox(height: isSmallScreen ? 30 : 40),
 
@@ -314,11 +281,8 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ForgotPasswordPage(),
-                                ),
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
                               );
                             },
                             child: Text(
@@ -372,115 +336,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   SizedBox(height: isSmallScreen ? 20 : 30),
 
-                  // Divider avec texte
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OU',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                            fontSize: isSmallScreen ? 13 : 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                    ],
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 20 : 30),
-
-                  // boutons réseaux sociaux
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            try {
-                              final GoogleSignInAccount? account = await GoogleSignIn().signIn();
-                              if (account == null) return; // annulé
-                              final GoogleSignInAuthentication auth = await account.authentication;
-                              final idToken = auth.idToken;
-                              if (idToken == null) throw Exception('ID Token manquant');
-
-                              final user = await _authService.loginWithGoogle(idToken);
-                              if (!mounted) return;
-                              if (user != null) {
-                                _navigateByRole(user.role, user.email);
-                              }
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Google: ${e.toString()}'), backgroundColor: Colors.red),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.g_mobiledata, size: 28),
-                          label: Text(
-                            'Google',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 12 : 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            try {
-                              final LoginResult result = await FacebookAuth.instance.login();
-                              if (result.status != LoginStatus.success) {
-                                throw Exception(result.message ?? 'Échec Facebook');
-                              }
-                              final accessToken = result.accessToken?.token;
-                              if (accessToken == null) throw Exception('Access token manquant');
-
-                              final user = await _authService.loginWithFacebook(accessToken);
-                              if (!mounted) return;
-                              if (user != null) {
-                                _navigateByRole(user.role, user.email);
-                              }
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Facebook: ${e.toString()}'), backgroundColor: Colors.red),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.facebook, size: 24),
-                          label: Text(
-                            'Facebook',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.blue.shade700,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 12 : 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 20 : 30),
-
                   // Lien inscription
                   Center(
                     child: Row(
@@ -495,9 +350,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => SignupPage()),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const SignupPage()),
                             );
                           },
                           child: Text(
@@ -520,26 +374,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
-    );
-  }
-
-  void _navigateByRole(String role, String userName) {
-    Widget destinationPage;
-    switch (role) {
-      case 'admin':
-        destinationPage = AdminHomePage(confirmationMessage: 'Bienvenue $userName !');
-        break;
-      case 'beneficiaire':
-        destinationPage = BeneficiaryHomePage(confirmationMessage: 'Bienvenue $userName !');
-        break;
-      case 'client':
-      default:
-        destinationPage = ClientHomePage(confirmationMessage: 'Bienvenue $userName !');
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => destinationPage),
     );
   }
 }

@@ -1,153 +1,71 @@
 import 'package:flutter/material.dart';
-import 'package:yelebara_mobile/services/AuthService.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({Key? key}) : super(key: key);
+  const ForgotPasswordPage({super.key});
 
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _phoneOrEmailController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  bool _codeSent = false;
   bool _isLoading = false;
-
-  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneOrEmailController.dispose();
+    _codeController.dispose();
+    _newPasswordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    try {
-      await _authService.requestPasswordReset(_emailController.text.trim());
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email de réinitialisation envoyé, vérifiez votre boîte mail.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.height < 700;
-
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Mot de passe oublié'),
-        backgroundColor: Colors.orange.shade600,
-      ),
+      appBar: AppBar(title: const Text('Réinitialiser le mot de passe')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: size.width * 0.08,
-              vertical: 20,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
-                Text(
-                  'Entrez votre email pour recevoir un lien de réinitialisation.',
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: isSmallScreen ? 14 : 16,
+                TextFormField(
+                  controller: _phoneOrEmailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Téléphone ou Email',
                   ),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
+                  enabled: !_codeSent,
                 ),
-                const SizedBox(height: 20),
-                Form(
-                  key: _formKey,
-                  child: TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'votreemail@exemple.com',
-                      prefixIcon: Icon(
-                        Icons.email_outlined,
-                        color: Colors.orange.shade600,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.orange.shade600,
-                          width: 2,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Veuillez entrer votre email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email invalide';
-                      }
-                      return null;
-                    },
+                const SizedBox(height: 16),
+                if (_codeSent) ...[
+                  TextFormField(
+                    controller: _codeController,
+                    decoration: const InputDecoration(labelText: 'Code de vérification'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Code requis' : null,
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _newPasswordController,
+                    decoration: const InputDecoration(labelText: 'Nouveau mot de passe'),
+                    obscureText: true,
+                    validator: (v) => (v == null || v.length < 6) ? '6 caractères minimum' : null,
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 SizedBox(
                   width: double.infinity,
-                  height: isSmallScreen ? 50 : 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade600,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    onPressed: _isLoading ? null : _onSubmit,
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Envoyer',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 16 : 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(_codeSent ? 'Changer le mot de passe' : 'Envoyer le code'),
                   ),
                 ),
               ],
@@ -157,4 +75,29 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       ),
     );
   }
+
+  Future<void> _onSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (!_codeSent) {
+      setState(() => _codeSent = true);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code envoyé')));
+      return;
+    }
+    // Simuler un changement de mot de passe
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mot de passe mis à jour')));
+    Navigator.of(context).pop();
+  }
 }
+
+
+
+
+
+
+
+
+

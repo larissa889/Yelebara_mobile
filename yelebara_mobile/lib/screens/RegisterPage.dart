@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:yelebara_mobile/widgets/YelebaraLogo.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({Key? key}) : super(key: key);
@@ -14,11 +16,27 @@ class _SignupPageState extends State<SignupPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _addressController = TextEditingController();
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  String _selectedUserType = 'client'; // 'client' ou 'beneficiaire'
+  String _selectedUserType = 'client'; // 'client' ou 'presseur'
+  String? _selectedZone; // Zone pour les presseurs
+
+  // Liste des zones disponibles (à remplacer par un appel API plus tard)
+  final List<String> _zones = [
+    'Ouagadougou – Zone du 1200 logements',
+    'Ouagadougou – Tampouy',
+    'Ouagadougou – Ouaga 2000',
+    'Ouagadougou – Zone du Bois',
+    'Ouagadougou – Gounghin',
+    'Ouagadougou – Cissin',
+    'Bobo-Dioulasso – Accart-ville',
+    'Bobo-Dioulasso – Belle-ville',
+    'Koudougou – Secteur 5',
+    'Koudougou – Centre-ville',
+  ];
 
   @override
   void dispose() {
@@ -27,6 +45,7 @@ class _SignupPageState extends State<SignupPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -37,10 +56,36 @@ class _SignupPageState extends State<SignupPage> {
       });
 
       // Simuler une inscription
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 2), () async {
         setState(() {
           _isLoading = false;
         });
+        // Sauvegarde du rôle sélectionné et des infos de profil pour l'étape de connexion
+        final prefs = await SharedPreferences.getInstance();
+        final emailKey = _emailController.text.trim().toLowerCase();
+        if (emailKey.isNotEmpty) {
+          await prefs.setString('user_role:$emailKey', _selectedUserType);
+          await prefs.setString('profile:$emailKey:name', _nameController.text.trim());
+          await prefs.setString('profile:$emailKey:email', _emailController.text.trim());
+          await prefs.setString('profile:$emailKey:phone', _phoneController.text.trim());
+          await prefs.setString('profile:$emailKey:address1', _addressController.text.trim());
+          await prefs.setString('profile:$emailKey:address2', '');
+          await prefs.setString('profile:$emailKey:phone2', '');
+          
+          // Sauvegarder la zone si c'est un presseur
+          if (_selectedUserType == 'presseur' && _selectedZone != null) {
+            await prefs.setString('profile:$emailKey:zone', _selectedZone!);
+          }
+          
+          // Indexer les presseurs
+          if (_selectedUserType == 'presseur') {
+            final List<String> index = prefs.getStringList('presseurs_index') ?? <String>[];
+            if (!index.contains(emailKey)) {
+              index.add(emailKey);
+              await prefs.setStringList('presseurs_index', index);
+            }
+          }
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -49,7 +94,7 @@ class _SignupPageState extends State<SignupPage> {
             backgroundColor: Colors.green,
           ),
         );
-        // Retour à la page de connexion
+        // Retour à la page de connexion (le routage par rôle se fait à la connexion)
         Navigator.pop(context);
       });
     }
@@ -79,42 +124,8 @@ class _SignupPageState extends State<SignupPage> {
                 children: [
                   SizedBox(height: isSmallScreen ? 10 : 20),
 
-                  // Bouton retour
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.arrow_back_ios,
-                      color: Colors.grey.shade700,
-                    ),
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 10 : 20),
-
                   // Logo
-                  Center(
-                    child: Container(
-                      width: isSmallScreen ? 80 : 100,
-                      height: isSmallScreen ? 80 : 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/YELEBARA_logo.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Center(child: YelebaraLogo(size: 120)),
 
                   SizedBox(height: isSmallScreen ? 20 : 30),
 
@@ -152,6 +163,7 @@ class _SignupPageState extends State<SignupPage> {
                             onTap: () {
                               setState(() {
                                 _selectedUserType = 'client';
+                                _selectedZone = null; // Réinitialiser la zone
                               });
                             },
                             child: Container(
@@ -193,7 +205,7 @@ class _SignupPageState extends State<SignupPage> {
                           child: GestureDetector(
                             onTap: () {
                               setState(() {
-                                _selectedUserType = 'beneficiaire';
+                                _selectedUserType = 'presseur';
                               });
                             },
                             child: Container(
@@ -201,7 +213,7 @@ class _SignupPageState extends State<SignupPage> {
                                 vertical: isSmallScreen ? 12 : 14,
                               ),
                               decoration: BoxDecoration(
-                                color: _selectedUserType == 'beneficiaire'
+                                color: _selectedUserType == 'presseur'
                                     ? Colors.orange.shade600
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
@@ -210,16 +222,16 @@ class _SignupPageState extends State<SignupPage> {
                                 children: [
                                   Icon(
                                     Icons.business_center_outlined,
-                                    color: _selectedUserType == 'beneficiaire'
+                                    color: _selectedUserType == 'presseur'
                                         ? Colors.white
                                         : Colors.grey.shade600,
                                     size: isSmallScreen ? 28 : 32,
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    'Bénéficiaire',
+                                    'Presseur',
                                     style: TextStyle(
-                                      color: _selectedUserType == 'beneficiaire'
+                                      color: _selectedUserType == 'presseur'
                                           ? Colors.white
                                           : Colors.grey.shade600,
                                       fontWeight: FontWeight.bold,
@@ -247,10 +259,16 @@ class _SignupPageState extends State<SignupPage> {
                           controller: _nameController,
                           keyboardType: TextInputType.name,
                           decoration: InputDecoration(
-                            labelText: 'Nom complet',
-                            hintText: 'Votre nom et prénom',
+                            labelText: _selectedUserType == 'presseur' 
+                                ? 'Nom du pressing' 
+                                : 'Nom complet',
+                            hintText: _selectedUserType == 'presseur'
+                                ? 'Ex: Pressing Excellence'
+                                : 'Votre nom et prénom',
                             prefixIcon: Icon(
-                              Icons.person_outline,
+                              _selectedUserType == 'presseur'
+                                  ? Icons.business
+                                  : Icons.person_outline,
                               color: Colors.orange.shade600,
                             ),
                             border: OutlineInputBorder(
@@ -273,7 +291,9 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer votre nom';
+                              return _selectedUserType == 'presseur'
+                                  ? 'Veuillez entrer le nom du pressing'
+                                  : 'Veuillez entrer votre nom';
                             }
                             return null;
                           },
@@ -359,6 +379,101 @@ class _SignupPageState extends State<SignupPage> {
                             return null;
                           },
                         ),
+
+                        // Zone de couverture (affichée uniquement si type "presseur")
+                        if (_selectedUserType == 'presseur') ...[
+                          SizedBox(height: isSmallScreen ? 14 : 18),
+                          DropdownButtonFormField<String>(
+                            value: _selectedZone,
+                            decoration: InputDecoration(
+                              labelText: 'Zone de couverture',
+                              hintText: 'Sélectionnez votre zone',
+                              prefixIcon: Icon(
+                                Icons.location_on_outlined,
+                                color: Colors.orange.shade600,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.orange.shade600,
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            items: _zones.map((String zone) {
+                              return DropdownMenuItem<String>(
+                                value: zone,
+                                child: Text(
+                                  zone,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedZone = newValue;
+                              });
+                            },
+                            validator: (value) {
+                              if (_selectedUserType == 'presseur' && value == null) {
+                                return 'Veuillez sélectionner une zone';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+
+                        // Adresse (affichée uniquement si type "client")
+                        if (_selectedUserType == 'client') ...[
+                          SizedBox(height: isSmallScreen ? 14 : 18),
+                          TextFormField(
+                            controller: _addressController,
+                            keyboardType: TextInputType.streetAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Adresse',
+                              hintText: 'Rue, quartier, ville',
+                              prefixIcon: Icon(
+                                Icons.home_outlined,
+                                color: Colors.orange.shade600,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.orange.shade600,
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            validator: (value) {
+                              if (_selectedUserType == 'client') {
+                                if (value == null || value.isEmpty) {
+                                  return 'Veuillez entrer votre adresse';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
 
                         SizedBox(height: isSmallScreen ? 14 : 18),
 
@@ -510,79 +625,7 @@ class _SignupPageState extends State<SignupPage> {
 
                   SizedBox(height: isSmallScreen ? 20 : 30),
 
-                  // Divider avec texte
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OU',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                            fontSize: isSmallScreen ? 13 : 14,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                    ],
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 20 : 30),
-
-                  // Boutons réseaux sociaux
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // Inscription avec Google
-                          },
-                          icon: const Icon(Icons.g_mobiledata, size: 28),
-                          label: Text(
-                            'Google',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 12 : 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // Inscription avec Facebook
-                          },
-                          icon: const Icon(Icons.facebook, size: 24),
-                          label: Text(
-                            'Facebook',
-                            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.blue.shade700,
-                            side: BorderSide(color: Colors.grey.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 12 : 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: isSmallScreen ? 20 : 30),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
 
                   // Lien connexion
                   Center(
