@@ -1,37 +1,27 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\ZoneController;
 
-
-Route::post('/register', [AuthController::class, 'register']);   // Client ou Presseur
+// Routes publiques
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/password/send-code', [AuthController::class, 'sendResetCode']);
+Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+Route::get('/zones', [ZoneController::class, 'index']);
 
-
-
+// Routes protégées
 Route::middleware('auth:sanctum')->group(function () {
-
-    Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/user', [AuthController::class, 'user']);
 
-    Route::prefix('client')->group(function () {
-        Route::get('/profile', [AuthController::class, 'clientProfile']);
-        Route::post('/profile/update', [AuthController::class, 'updateClientProfile']);
+    // Routes admin
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        Route::get('/presseurs/pending', [AdminController::class, 'pendingPresseurs']);
+        Route::post('/presseurs/{id}/validate', [AdminController::class, 'validatePresseur']);
+        Route::post('/presseurs/{id}/reject', [AdminController::class, 'rejectPresseur']);
     });
-
-    Route::prefix('presseur')->group(function () {
-        Route::get('/profile', [AuthController::class, 'presseurProfile']);
-        Route::post('/profile/update', [AuthController::class, 'updatePresseurProfile']);
-        Route::post('/zones', [AuthController::class, 'assignZones']); // Assigner zones
-    });
-
-    Route::prefix('admin')->middleware('admin')->group(function () {
-        Route::get('/presseurs', [AuthController::class, 'listPresseurs']);
-        Route::post('/presseur/verify/{id}', [AuthController::class, 'verifyPresseur']);
-        Route::post('/presseur/reject/{id}', [AuthController::class, 'rejectPresseur']);
-    });
-
 });

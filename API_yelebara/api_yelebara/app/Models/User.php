@@ -1,27 +1,51 @@
 <?php
 
+namespace App\Models;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'phone2', 'password', 'role', 'status', 'photo_url'
+        'name', 'phone', 'email', 'password', 'role', 'status',
+        'address1', 'address2', 'phone2', 'zone', 'photo'
     ];
 
     protected $hidden = ['password', 'remember_token'];
 
-    public function profile()
+    protected $casts = [
+        'validated_at' => 'datetime',
+        'email_verified_at' => 'datetime',
+    ];
+
+    public function isPending()
     {
-        return $this->hasOne(UserProfile::class);
+        return $this->status === 'pending';
     }
 
-    public function presseurProfile()
+    public function isActive()
     {
-        return $this->hasOne(PresseurProfile::class);
+        return $this->status === 'active';
     }
 
-    public function zones()
+    public function isPresseur()
     {
-        return $this->belongsToMany(Zone::class, 'presseur_zones');
+        return $this->role === 'presseur';
+    }
+
+    public function validator()
+    {
+        return $this->belongsTo(User::class, 'validated_by');
+    }
+
+    public function scopePendingPresseurs($query)
+    {
+        return $query->where('role', 'presseur')
+                    ->where('status', 'pending');
     }
 }

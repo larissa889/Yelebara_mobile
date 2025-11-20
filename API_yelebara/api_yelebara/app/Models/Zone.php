@@ -6,5 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Zone extends Model
 {
-    public function presseurs() { return $this->belongsToMany(User::class, 'presseur_zones'); }
+    protected $fillable = ['name', 'city', 'is_active'];
+
+    protected $casts = ['is_active' => 'boolean'];
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }
+

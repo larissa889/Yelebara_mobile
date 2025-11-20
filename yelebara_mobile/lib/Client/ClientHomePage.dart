@@ -20,7 +20,7 @@ class ClientHomePage extends StatefulWidget {
 
 class _ClientHomePageState extends State<ClientHomePage> {
   bool _showLocationDialog = false;
-  String _selectedPrecision = 'exacte'; // 'exacte' ou 'approximative'
+  String _selectedPrecision = 'exacte'; 
   bool _gpsDisabled = false;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   String? _headerName;
@@ -335,20 +335,26 @@ class _ClientHomePageState extends State<ClientHomePage> {
                     _buildServiceCard(
                       'Lavage simple',
                       Icons.local_laundry_service,
-                      Colors.blue,
-                      price: 'à partir de 500 F',
+                      Colors.orange,
+                      price: 'à partir de 500F/Kg',
                     ),
                     _buildServiceCard(
                       'Repassage',
                       Icons.iron,
-                      Colors.purple,
-                      price: 'à partir de 300 F',
+                      Colors.orange,
+                      price: 'à partir de 100 F',
                     ),
                     _buildServiceCard(
                       'Pressing complet',
                       Icons.dry_cleaning,
-                      Colors.green,
+                      Colors.orange,
                       price: 'à partir de 1000 F',
+                    ),
+                    _buildServiceCard(
+                      'Calculateur de prix',
+                      Icons.calculate,
+                      Colors.teal,
+                      price: 'Estimer le coût',
                     ),
                   ]),
                 ),
@@ -508,7 +514,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
         selectedItemColor: Colors.orange.shade700,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
-          if (index == 0) return; // Rester sur Accueil
+          if (index == 0) return; 
           Widget page;
           switch (index) {
             case 1:
@@ -4025,6 +4031,6 @@ class _ClientBottomNavState extends State<_ClientBottomNav> {
         ),
         const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
       ],
-    );
+    ); 
   }
 }

@@ -2,164 +2,107 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\UserProfile;
-use App\Models\PresseurProfile;
-use App\Models\Zone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * Register a new user
+     * Inscription d'un nouvel utilisateur
      */
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'required|string|max:20|unique:users',
-            'password' => 'required|string|min:6|confirmed',
+            'phone' => 'required|string|unique:users,phone',
+            'email' => 'nullable|email|unique:users,email',
+            'password' => 'required|string|min:6',
             'role' => 'required|in:client,presseur',
-            'address' => 'required_if:role,client|string|max:500',
-            'zone_id' => 'required_if:role,presseur|exists:zones,id',
-            'business_name' => 'required_if:role,presseur|string|max:255',
+            'address1' => 'required_if:role,client|string|nullable',
+            'address2' => 'nullable|string',
+            'phone2' => 'nullable|string',
+            'zone' => 'required_if:role,presseur|string|nullable',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $user = User::create([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'status' => $validated['role'] === 'presseur' ? 'pending' : 'active',
+            'address1' => $validated['address1'] ?? null,
+            'address2' => $validated['address2'] ?? null,
+            'phone2' => $validated['phone2'] ?? null,
+            'zone' => $validated['zone'] ?? null,
+        ]);
 
-        try {
-            // Create user
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'password' => Hash::make($request->password),
-                'role' => $request->role,
-                'status' => $request->role === 'presseur' ? 'pending' : 'active',
-            ]);
+        $token = $user->createToken('auth-token')->plainTextToken;
 
-            // Create user profile
-            $profileData = [];
-            
-            if ($request->role === 'client') {
-                $profileData = [
-                    'address1' => $request->address,
-                    'latitude' => $request->latitude,
-                    'longitude' => $request->longitude,
-                ];
-            }
-
-            $user->profile()->create($profileData);
-
-            // Create presseur profile if role is presseur
-            if ($request->role === 'presseur') {
-                $presseurProfile = $user->presseurProfile()->create([
-                    'business_name' => $request->business_name,
-                    'is_verified' => false,
-                ]);
-
-                // Attach zone
-                if ($request->zone_id) {
-                    $user->zones()->attach($request->zone_id);
-                }
-            }
-
-            // Create token
-            $token = $user->createToken('auth_token')->plainTextToken;
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Inscription réussie',
-                'data' => [
-                    'user' => $this->getUserData($user),
-                    'token' => $token,
-                ]
-            ], 201);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Une erreur est survenue lors de l\'inscription',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => $validated['role'] === 'presseur' 
+                ? 'Inscription réussie. En attente de validation par un administrateur.'
+                : 'Inscription réussie !',
+            'user' => $user,
+            'token' => $token,
+            'requires_validation' => $validated['role'] === 'presseur',
+        ], 201);
     }
 
     /**
-     * Login user
+     * Connexion
      */
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+        $validated = $request->validate([
+            'phone' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+        $user = User::where('phone', $validated['phone'])->first();
+
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'phone' => ['Identifiants incorrects.'],
+            ]);
         }
 
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        // Vérifier le statut si c'est un presseur
+        if ($user->isPresseur() && $user->isPending()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email ou mot de passe incorrect'
-            ], 401);
+                'message' => 'Votre compte est en attente de validation par un administrateur.',
+                'status' => 'pending'
+            ], 403);
         }
 
         if ($user->status === 'suspended') {
             return response()->json([
                 'success' => false,
-                'message' => 'Votre compte a été suspendu. Contactez l\'administration.'
+                'message' => 'Votre compte a été suspendu. Contactez le support.',
+                'status' => 'suspended'
             ], 403);
         }
 
-        if ($user->role === 'presseur' && $user->status === 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Votre compte presseur est en attente de validation par l\'administration.'
-            ], 403);
-        }
-
-        if ($user->role === 'presseur' && $user->status === 'rejected') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Votre demande de compte presseur a été rejetée.'
-            ], 403);
-        }
-
-        // Revoke all tokens
+        // Révoquer les anciens tokens
         $user->tokens()->delete();
 
-        // Create new token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Connexion réussie',
-            'data' => [
-                'user' => $this->getUserData($user),
-                'token' => $token,
-            ]
+            'user' => $user,
+            'token' => $token,
         ]);
     }
 
     /**
-     * Logout user
+     * Déconnexion
      */
     public function logout(Request $request)
     {
@@ -172,138 +115,68 @@ class AuthController extends Controller
     }
 
     /**
-     * Get authenticated user
+     * Obtenir l'utilisateur connecté
      */
-    public function me(Request $request)
+    public function user(Request $request)
     {
         return response()->json([
             'success' => true,
-            'data' => $this->getUserData($request->user())
+            'user' => $request->user()
         ]);
     }
 
     /**
-     * Send password reset link
+     * Réinitialisation de mot de passe (envoi du code)
      */
-    public function forgotPassword(Request $request)
+    public function sendResetCode(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
+        $validated = $request->validate([
+            'phone' => 'required|string|exists:users,phone',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Un lien de réinitialisation a été envoyé à votre email'
-            ]);
-        }
+        $user = User::where('phone', $validated['phone'])->first();
+        
+        // TODO: Implémenter l'envoi du code par SMS
+        $resetCode = rand(100000, 999999);
+        
+        // Stocker temporairement (utiliser cache en production)
+        cache()->put("reset_code_{$user->phone}", $resetCode, now()->addMinutes(10));
 
         return response()->json([
-            'success' => false,
-            'message' => 'Impossible d\'envoyer le lien de réinitialisation'
-        ], 500);
+            'success' => true,
+            'message' => 'Code de réinitialisation envoyé',
+            'code' => $resetCode // À retirer en production
+        ]);
     }
 
     /**
-     * Reset password
+     * Vérifier le code et réinitialiser le mot de passe
      */
     public function resetPassword(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-            'email' => 'required|email',
+        $validated = $request->validate([
+            'phone' => 'required|string|exists:users,phone',
+            'code' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        if ($validator->fails()) {
+        $storedCode = cache()->get("reset_code_{$validated['phone']}");
+
+        if (!$storedCode || $storedCode != $validated['code']) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Code invalide ou expiré'
+            ], 400);
         }
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password)
-                ])->setRememberToken(Str::random(60));
+        $user = User::where('phone', $validated['phone'])->first();
+        $user->update(['password' => Hash::make($validated['password'])]);
 
-                $user->save();
-            }
-        );
-
-        if ($status === Password::PASSWORD_RESET) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Votre mot de passe a été réinitialisé avec succès'
-            ]);
-        }
+        cache()->forget("reset_code_{$validated['phone']}");
 
         return response()->json([
-            'success' => false,
-            'message' => 'Le lien de réinitialisation est invalide ou a expiré'
-        ], 400);
-    }
-
-    /**
-     * Format user data for response
-     */
-    private function getUserData($user)
-    {
-        $userData = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'phone2' => $user->phone2,
-            'role' => $user->role,
-            'status' => $user->status,
-            'photo_url' => $user->photo_url,
-            'created_at' => $user->created_at,
-        ];
-
-        // Add profile data
-        if ($user->profile) {
-            $userData['profile'] = [
-                'address1' => $user->profile->address1,
-                'address2' => $user->profile->address2,
-                'latitude' => $user->profile->latitude,
-                'longitude' => $user->profile->longitude,
-            ];
-        }
-
-        // Add presseur specific data
-        if ($user->role === 'presseur' && $user->presseurProfile) {
-            $userData['presseur'] = [
-                'business_name' => $user->presseurProfile->business_name,
-                'is_verified' => $user->presseurProfile->is_verified,
-                'rating' => $user->presseurProfile->rating,
-                'total_reviews' => $user->presseurProfile->total_reviews,
-                'total_orders' => $user->presseurProfile->total_orders,
-                'total_revenue' => $user->presseurProfile->total_revenue,
-                'schedule' => $user->presseurProfile->schedule,
-                'zones' => $user->zones->map(function($zone) {
-                    return [
-                        'id' => $zone->id,
-                        'name' => $zone->name,
-                        'city' => $zone->city,
-                    ];
-                }),
-            ];
-        }
-
-        return $userData;
+            'success' => true,
+            'message' => 'Mot de passe réinitialisé avec succès'
+        ]);
     }
 }

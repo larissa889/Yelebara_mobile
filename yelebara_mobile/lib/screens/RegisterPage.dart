@@ -12,7 +12,6 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -41,7 +40,6 @@ class _SignupPageState extends State<SignupPage> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -62,26 +60,25 @@ class _SignupPageState extends State<SignupPage> {
         });
         // Sauvegarde du rôle sélectionné et des infos de profil pour l'étape de connexion
         final prefs = await SharedPreferences.getInstance();
-        final emailKey = _emailController.text.trim().toLowerCase();
-        if (emailKey.isNotEmpty) {
-          await prefs.setString('user_role:$emailKey', _selectedUserType);
-          await prefs.setString('profile:$emailKey:name', _nameController.text.trim());
-          await prefs.setString('profile:$emailKey:email', _emailController.text.trim());
-          await prefs.setString('profile:$emailKey:phone', _phoneController.text.trim());
-          await prefs.setString('profile:$emailKey:address1', _addressController.text.trim());
-          await prefs.setString('profile:$emailKey:address2', '');
-          await prefs.setString('profile:$emailKey:phone2', '');
+        final phoneKey = _phoneController.text.trim();
+        if (phoneKey.isNotEmpty) {
+          await prefs.setString('user_role:$phoneKey', _selectedUserType);
+          await prefs.setString('profile:$phoneKey:name', _nameController.text.trim());
+          await prefs.setString('profile:$phoneKey:phone', _phoneController.text.trim());
+          await prefs.setString('profile:$phoneKey:address1', _addressController.text.trim());
+          await prefs.setString('profile:$phoneKey:address2', '');
+          await prefs.setString('profile:$phoneKey:phone2', '');
           
           // Sauvegarder la zone si c'est un presseur
           if (_selectedUserType == 'presseur' && _selectedZone != null) {
-            await prefs.setString('profile:$emailKey:zone', _selectedZone!);
+            await prefs.setString('profile:$phoneKey:zone', _selectedZone!);
           }
           
           // Indexer les presseurs
           if (_selectedUserType == 'presseur') {
             final List<String> index = prefs.getStringList('presseurs_index') ?? <String>[];
-            if (!index.contains(emailKey)) {
-              index.add(emailKey);
+            if (!index.contains(phoneKey)) {
+              index.add(phoneKey);
               await prefs.setStringList('presseurs_index', index);
             }
           }
@@ -301,54 +298,12 @@ class _SignupPageState extends State<SignupPage> {
 
                         SizedBox(height: isSmallScreen ? 14 : 18),
 
-                        // Champ Email
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            hintText: 'votreemail@exemple.com',
-                            prefixIcon: Icon(
-                              Icons.email_outlined,
-                              color: Colors.orange.shade600,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.orange.shade600,
-                                width: 2,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer votre email';
-                            }
-                            if (!value.contains('@')) {
-                              return 'Email invalide';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        SizedBox(height: isSmallScreen ? 14 : 18),
-
-                        // Champ Téléphone
+                        // Champ Téléphone (identifiant principal)
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'Téléphone',
+                            labelText: 'Numéro de téléphone',
                             hintText: '+226 XX XX XX XX',
                             prefixIcon: Icon(
                               Icons.phone_outlined,
@@ -371,10 +326,20 @@ class _SignupPageState extends State<SignupPage> {
                             ),
                             filled: true,
                             fillColor: Colors.white,
+                            helperText: 'Ce numéro servira pour vous connecter',
+                            helperStyle: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer votre numéro';
+                              return 'Veuillez entrer votre numéro de téléphone';
+                            }
+                            // Validation basique du format téléphone
+                            final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
+                            if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
+                              return 'Numéro de téléphone invalide';
                             }
                             return null;
                           },

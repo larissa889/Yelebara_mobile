@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yelebara_mobile/widgets/YelebaraLogo.dart';
 import 'package:yelebara_mobile/Screens/RegisterPage.dart';
 import 'package:yelebara_mobile/Screens/ForgotPasswordPage.dart';
@@ -34,16 +35,55 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Formate le numéro de téléphone au format Burkinabè
+  String _formatPhoneNumber(String phone) {
+    // Enlever tous les espaces et caractères spéciaux
+    String cleaned = phone.replaceAll(RegExp(r'[^\d]'), '');
+    
+    // Si le numéro commence par 226 (code pays Burkina Faso), le retirer
+    if (cleaned.startsWith('226')) {
+      cleaned = cleaned.substring(3);
+    }
+    
+    // Si le numéro commence par +226, le retirer
+    if (phone.startsWith('+226')) {
+      cleaned = phone.substring(4).replaceAll(RegExp(r'[^\d]'), '');
+    }
+    
+    return cleaned;
+  }
+
+  /// Valide le format du numéro de téléphone
+  String? _validatePhoneNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Veuillez entrer votre numéro de téléphone';
+    }
+    
+    String cleaned = _formatPhoneNumber(value);
+    
+    // Au Burkina Faso, les numéros commencent généralement par 5, 6, 7
+    // et ont 8 chiffres
+    if (cleaned.length != 8) {
+      return 'Le numéro doit contenir 8 chiffres';
+    }
+    
+    if (!RegExp(r'^[5-7]').hasMatch(cleaned)) {
+      return 'Le numéro doit commencer par 5, 6 ou 7';
+    }
+    
+    return null;
   }
 
   void _handleLogin() async {
@@ -52,12 +92,14 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = true;
       });
 
+      // Formater le numéro de téléphone
+      String formattedPhone = _formatPhoneNumber(_phoneController.text);
+
       // Simuler une connexion et récupération du rôle
-      // Dans votre implémentation réelle, vous ferez un appel API ici
       await Future.delayed(const Duration(seconds: 2));
 
-      // Récupérer d'abord le rôle éventuellement sauvegardé à l'inscription
-      String userRole = await _getStoredOrComputedRole(_emailController.text);
+      // Récupérer le rôle sauvegardé
+      String userRole = await _getStoredOrComputedRole(formattedPhone);
 
       setState(() {
         _isLoading = false;
@@ -70,16 +112,21 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<String> _getStoredOrComputedRole(String email) async {
+  Future<String> _getStoredOrComputedRole(String phone) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = email.trim().toLowerCase();
-    final stored = prefs.getString('user_role:'+key);
+    final key = phone.trim();
+    final stored = prefs.getString('user_role:$key');
     if (stored != null && stored.isNotEmpty) {
       return stored;
     }
-    // Fallback heuristique si rien n'est stocké
-    if (key.contains('admin')) return 'admin';
-    if (key.contains('presseur') || key.contains('benef')) return 'beneficiaire';
+    
+    // Fallback: vérifier si c'est un numéro admin ou presseur
+    // Vous pouvez définir des numéros spécifiques pour les admins
+    if (phone == '70000000' || phone == '76000000') {
+      return 'admin';
+    }
+    
+    // Par défaut, tout le monde est client
     return 'client';
   }
 
@@ -91,6 +138,7 @@ class _LoginPageState extends State<LoginPage> {
         destinationPage = const AdminHomePage();
         break;
       case 'presseur':
+      case 'beneficiaire':
         destinationPage = const PresseurHomePage();
         break;
       case 'client':
@@ -113,14 +161,16 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
 
-    // Sauvegarder l'email de l'utilisateur connecté pour le profil
-    _saveCurrentUserEmail();
+    // Sauvegarder le numéro de l'utilisateur connecté pour le profil
+    _saveCurrentUserPhone();
   }
 
-  Future<void> _saveCurrentUserEmail() async {
+  Future<void> _saveCurrentUserPhone() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = _emailController.text.trim().toLowerCase();
+    final key = _formatPhoneNumber(_phoneController.text);
     if (key.isNotEmpty) {
+      await prefs.setString('current_user_phone', key);
+      // Pour compatibilité avec le code existant qui utilise 'current_user_email'
       await prefs.setString('current_user_email', key);
     }
   }
@@ -179,16 +229,25 @@ class _LoginPageState extends State<LoginPage> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        // Champ Email
+                        // Champ Numéro de téléphone
                         TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(8),
+                          ],
                           decoration: InputDecoration(
-                            labelText: 'Email',
-                            hintText: 'votreemail@exemple.com',
+                            labelText: 'Numéro de téléphone',
+                            hintText: '70 12 34 56',
                             prefixIcon: Icon(
-                              Icons.email_outlined,
+                              Icons.phone_android,
                               color: Colors.orange.shade600,
+                            ),
+                            prefixText: '+226 ',
+                            prefixStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -207,15 +266,23 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             filled: true,
                             fillColor: Colors.white,
+                            helperText: 'Format: 70 12 34 56',
+                            helperStyle: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Veuillez entrer votre email';
+                          validator: _validatePhoneNumber,
+                          onChanged: (value) {
+                            // Formater automatiquement avec des espaces
+                            if (value.length == 2 || value.length == 5) {
+                              if (!value.endsWith(' ')) {
+                                _phoneController.text = value + ' ';
+                                _phoneController.selection = TextSelection.fromPosition(
+                                  TextPosition(offset: _phoneController.text.length),
+                                );
+                              }
                             }
-                            if (!value.contains('@')) {
-                              return 'Email invalide';
-                            }
-                            return null;
                           },
                         ),
 
