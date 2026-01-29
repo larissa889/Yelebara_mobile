@@ -15,4 +15,6 @@ abstract class AuthRepository {
   Future<void> logout();
   
   Future<UserEntity?> getCurrentUser();
+  
+  Future<void> updateUser(UserEntity user);
 }

@@ -129,6 +129,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
+  Future<void> updateProfilePhoto(String? path) async {
+    final currentUser = state.user;
+    if (currentUser == null) return;
+
+    final updatedUser = currentUser.copyWith(photoUrl: path);
+    // Update local state immediately for UI responsiveness
+    state = state.copyWith(user: updatedUser);
+    
+    // Persist changes
+    await _repository.updateUser(updatedUser);
+  }
+
   void clearError() {
     state = state.copyWith(errorMessage: null);
   }

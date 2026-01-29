@@ -2,6 +2,7 @@ import 'package:yelebara_mobile/features/auth/data/datasources/auth_local_dataso
 import 'package:yelebara_mobile/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:yelebara_mobile/features/auth/domain/entities/user_entity.dart';
 import 'package:yelebara_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:yelebara_mobile/features/auth/data/models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -50,5 +51,23 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserEntity?> getCurrentUser() async {
     final cachedUser = await localDataSource.getCachedUser();
     return cachedUser?.toEntity();
+  }
+
+  @override
+  Future<void> updateUser(UserEntity user) async {
+    final userModel = UserModel(
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      zone: user.zone,
+      address: user.address,
+      photoUrl: user.photoUrl,
+      // Preserve token if possible, or leave null if not needed for local updates
+    );
+    await localDataSource.cacheUser(userModel);
+    
+    // In a real app, we would also sync with remoteDataSource here
+    // await remoteDataSource.updateProfile(userModel);
   }
 }

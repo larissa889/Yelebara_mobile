@@ -62,12 +62,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
 
     if (success && mounted) {
-      final user = ref.read(authProvider).user;
-      if (user?.role == 'presseur') {
-        context.go('/presseur/home');
-      } else {
-        context.go('/home');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Inscription réussie ! Veuillez vous connecter.'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.go('/login');
     }
   }
 
