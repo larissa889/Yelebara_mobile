@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -52,12 +53,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final formattedPhone = _formatPhoneNumber(_phoneController.text);
+    // Ensure we send the number with +226 prefix as stored in DB
+    final phoneToSend = '+226$formattedPhone';
+    
     final success = await ref.read(authProvider.notifier).login(
-          formattedPhone,
+          phoneToSend,
           _passwordController.text,
         );
 
     if (success && mounted) {
+      // Demander la permission de localisation après la connexion
+      await Geolocator.requestPermission();
+
       final user = ref.read(authProvider).user;
       if (user?.role == 'admin') {
         context.go('/admin/home');

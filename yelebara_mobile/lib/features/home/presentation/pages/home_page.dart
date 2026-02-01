@@ -104,6 +104,7 @@ class HomePage extends ConsumerWidget {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               shrinkWrap: true,
+              childAspectRatio: 0.7,
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _serviceCard(
@@ -207,7 +208,7 @@ class HomePage extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('Commander', style: TextStyle(color: Colors.white)),
+              child: const FittedBox(child: Text('Commander', style: TextStyle(color: Colors.white))),
             ),
           ),
         ],

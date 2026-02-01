@@ -71,23 +71,26 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
         backgroundColor: widget.serviceColor,
         foregroundColor: Colors.white,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildServiceCard(),
-            const SizedBox(height: 20),
-            _buildAmountField(),
-            const SizedBox(height: 16),
-            _buildPickupSwitch(),
-            const SizedBox(height: 16),
-            _buildDateTimePickers(),
-            const SizedBox(height: 16),
-            _buildInstructionsField(),
-            const SizedBox(height: 24),
-            _buildSubmitButton(),
-          ],
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildServiceCard(),
+              const SizedBox(height: 20),
+              _buildAmountField(),
+              const SizedBox(height: 16),
+              _buildPickupSwitch(),
+              const SizedBox(height: 16),
+              _buildDateTimePickers(),
+              const SizedBox(height: 16),
+              _buildInstructionsField(),
+              const SizedBox(height: 24),
+              _buildSubmitButton(),
+              const SizedBox(height: 40), // Extra padding for bottom safe area/OS gestures
+            ],
+          ),
         ),
       ),
     );

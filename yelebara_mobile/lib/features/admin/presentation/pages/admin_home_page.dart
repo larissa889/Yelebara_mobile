@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AdminHomePage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
+
+class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({Key? key}) : super(key: key);
 
   @override
-  State<AdminHomePage> createState() => _AdminHomePageState();
+  ConsumerState<AdminHomePage> createState() => _AdminHomePageState();
 }
 
-class _AdminHomePageState extends State<AdminHomePage> {
+class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = const [
@@ -33,6 +36,36 @@ class _AdminHomePageState extends State<AdminHomePage> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+           IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Déconnexion'),
+                  content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Annuler'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await ref.read(authProvider.notifier).logout();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      },
+                      child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: _pages[_currentIndex],
@@ -242,41 +275,67 @@ class _AdminZonesPage extends StatelessWidget {
 }
 
 // 🧩 Onglet 5 : Profil
-class _AdminProfilePage extends StatelessWidget {
+class _AdminProfilePage extends ConsumerWidget {
   const _AdminProfilePage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, size: 40, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            const Text("Admin Yélébara",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text("admin@yelebara.com"),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Implement proper auth logout
-                context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text("Se déconnecter"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.orange,
+                child: Icon(Icons.person, size: 40, color: Colors.white),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text("Admin Yélébara",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text("admin@yelebara.com"),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Déconnexion'),
+                      content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Annuler'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await ref.read(authProvider.notifier).logout();
+                            if (context.mounted) {
+                              context.go('/login');
+                            }
+                          },
+                          child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text("Se déconnecter"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

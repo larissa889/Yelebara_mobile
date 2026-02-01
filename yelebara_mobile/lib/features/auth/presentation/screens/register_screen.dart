@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
@@ -54,7 +55,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final success = await ref.read(authProvider.notifier).register(
           name: _nameController.text.trim(),
-          phone: _phoneController.text.trim(),
+          phone: '+226${_phoneController.text.trim()}',
           password: _passwordController.text,
           role: _selectedUserType,
           zone: _selectedUserType == 'presseur' ? _selectedZone : null,
@@ -191,21 +192,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    inputFormatters: [ // Assuming I don't have access to Formatters in import, I will omit if not sure, but regex validation handles it. 
-                      // Actually LoginScreen had formatters. I should import them if missing or just rely on validator.
-                      // Code uses RegExp validator so it's fine.
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(8),
                     ],
-                     decoration: const InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Numéro de téléphone',
-                      hintText: '+226 XX XX XX XX',
-                      helperText: 'Ce numéro servira pour vous connecter',
+                      hintText: '70 12 34 56',
+                      prefixText: '+226 ',
                       prefixIcon: Icon(Icons.phone_android_rounded),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Veuillez entrer votre numéro';
                       }
-                       // Simple validation
                       if (value.length < 8) return 'Numéro invalide';
                       return null;
                     },

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // models
 class Order {
@@ -47,14 +49,14 @@ class Client {
 }
 
 
-class PresseurHomePage extends StatefulWidget {
+class PresseurHomePage extends ConsumerStatefulWidget {
   const PresseurHomePage({Key? key}) : super(key: key);
 
   @override
-  State<PresseurHomePage> createState() => _PresseurHomePageState();
+  ConsumerState<PresseurHomePage> createState() => _PresseurHomePageState();
 }
 
-class _PresseurHomePageState extends State<PresseurHomePage> {
+class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = const [
@@ -75,7 +77,29 @@ class _PresseurHomePageState extends State<PresseurHomePage> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              context.go('/login');
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Déconnexion'),
+                  content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Annuler'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await ref.read(authProvider.notifier).logout();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      },
+                      child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ],

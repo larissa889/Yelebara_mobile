@@ -15,9 +15,9 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
   // Use Mock for local testing until backend is ready
-  return MockAuthRemoteDataSource();
-  // final dio = ref.watch(apiClientProvider);
-  // return AuthRemoteDataSourceImpl(dio: dio);
+  // return MockAuthRemoteDataSource();
+  final dio = ref.watch(apiClientProvider);
+  return AuthRemoteDataSourceImpl(dio: dio);
 });
 
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
@@ -125,8 +125,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _repository.logout();
-    state = const AuthState(status: AuthStatus.unauthenticated);
+    try {
+      await _repository.logout();
+    } catch (e) {
+      // Ignore errors during logout (e.g. network issues)
+      // We still want to clear the local session
+    } finally {
+      state = const AuthState(status: AuthStatus.unauthenticated);
+    }
   }
 
   Future<void> updateProfilePhoto(String? path) async {

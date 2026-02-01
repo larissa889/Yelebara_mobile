@@ -7,6 +7,7 @@ import 'package:yelebara_mobile/features/home/presentation/widgets/client_bottom
 import 'package:yelebara_mobile/features/orders/presentation/pages/create_order_page.dart';
 import 'package:yelebara_mobile/features/profile/domain/entities/profile_entity.dart';
 import 'package:yelebara_mobile/features/profile/presentation/providers/profile_provider.dart';
+import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class ClientProfilePage extends ConsumerStatefulWidget {
@@ -23,6 +24,26 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
     final profile = profileState.profile;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    
+    final authState = ref.watch(authProvider);
+    final authUser = authState.user;
+    
+    // Merge auth data with profile data (profile takes precedence if available/edited)
+    final displayName = (profile.name != null && profile.name!.isNotEmpty) 
+        ? profile.name 
+        : (authUser?.name ?? 'Utilisateur');
+        
+    final displayPhone = (profile.phone != null && profile.phone!.isNotEmpty)
+        ? profile.phone
+        : (authUser?.phone ?? '');
+        
+    final displayEmail = (profile.email != null && profile.email!.isNotEmpty)
+        ? profile.email
+        : (authUser?.email ?? '');
+
+    final displayAddress = (profile.address1 != null && profile.address1!.isNotEmpty)
+        ? profile.address1
+        : (authUser?.address ?? '');
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -82,7 +103,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            profile.name ?? 'Utilisateur',
+                            displayName ?? 'Utilisateur',
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.onSurface,
@@ -97,7 +118,7 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                     const SizedBox(height: 16),
                     _ProfileField(
                       title: 'Numéro de téléphone',
-                      value: profile.phone ?? '',
+                      value: displayPhone ?? '',
                       icon: Icons.phone_outlined,
                     ),
                     _EditableProfileField(
@@ -111,9 +132,9 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                             );
                       },
                     ),
-                    _ProfileField(title: 'Email', value: profile.email ?? '', icon: Icons.email_outlined),
+                    _ProfileField(title: 'Email', value: displayEmail ?? '', icon: Icons.email_outlined),
                     _ProfileField(
-                        title: 'Adresse', value: profile.address1 ?? '', icon: Icons.location_on_outlined),
+                        title: 'Adresse', value: displayAddress ?? '', icon: Icons.location_on_outlined),
                     _EditableProfileField(
                       title: '2nde adresse',
                       value: profile.address2 ?? '',
@@ -385,10 +406,29 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
   }
 
   Future<void> _logout() async {
-    await ref.read(profileProvider.notifier).logout();
-    if (mounted) {
-      context.go('/login');
-    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Déconnexion'),
+        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(authProvider.notifier).logout();
+              if (mounted) {
+                context.go('/login');
+              }
+            },
+            child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmDeleteAccount() async {

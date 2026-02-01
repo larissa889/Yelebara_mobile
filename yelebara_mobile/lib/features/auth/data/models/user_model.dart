@@ -12,6 +12,7 @@ class UserModel extends UserEntity {
     super.address,
     this.token,
     super.photoUrl,
+    super.email,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -21,8 +22,9 @@ class UserModel extends UserEntity {
       phone: json['phone'] ?? '',
       role: json['role'] ?? 'client',
       zone: json['zone'],
-      address: json['address'],
+      address: json['address1'] ?? json['address'],
       photoUrl: json['photoUrl'],
+      email: json['email'],
       token: json['token'],
     );
   }
@@ -36,6 +38,7 @@ class UserModel extends UserEntity {
       'zone': zone,
       'address': address,
       'photoUrl': photoUrl,
+      'email': email,
       'token': token,
     };
   }
@@ -49,6 +52,7 @@ class UserModel extends UserEntity {
       zone: zone,
       address: address,
       photoUrl: photoUrl,
+      email: email,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:yelebara_mobile/features/orders/presentation/pages/orders_page.dart';
@@ -142,8 +143,30 @@ class HomeDrawer extends ConsumerWidget {
                     style: TextStyle(color: Colors.redAccent),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
-                    ref.read(authProvider.notifier).logout();
+                    Navigator.pop(context); // Close drawer
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Déconnexion'),
+                        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context); // Close dialog
+                              await ref.read(authProvider.notifier).logout();
+                              if (context.mounted) {
+                                context.go('/login');
+                              }
+                            },
+                            child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ],

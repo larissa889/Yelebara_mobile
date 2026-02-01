@@ -6,6 +6,7 @@ class UserEntity {
   final String? zone;
   final String? address;
   final String? photoUrl;
+  final String? email;
 
   const UserEntity({
     required this.id,
@@ -15,6 +16,7 @@ class UserEntity {
     this.zone,
     this.address,
     this.photoUrl,
+    this.email,
   });
 
   UserEntity copyWith({
@@ -25,6 +27,7 @@ class UserEntity {
     String? zone,
     String? address,
     String? photoUrl,
+    String? email,
   }) {
     return UserEntity(
       id: id ?? this.id,
@@ -34,6 +37,7 @@ class UserEntity {
       zone: zone ?? this.zone,
       address: address ?? this.address,
       photoUrl: photoUrl ?? this.photoUrl,
+      email: email ?? this.email,
     );
   }
 

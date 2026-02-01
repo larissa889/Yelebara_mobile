@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\AdminController;
-use App\Http\Controllers\Api\ZoneController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ZoneController;
 
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
