@@ -6,6 +6,7 @@ import 'package:yelebara_mobile/features/profile/data/datasources/profile_local_
 import 'package:yelebara_mobile/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:yelebara_mobile/features/profile/domain/entities/profile_entity.dart';
 import 'package:yelebara_mobile/features/profile/domain/repositories/profile_repository.dart';
+import 'package:yelebara_mobile/features/auth/domain/repositories/auth_repository.dart';
 
 // Data Source Provider
 final profileLocalDataSourceProvider = Provider<ProfileLocalDataSource>((ref) {
@@ -46,8 +47,9 @@ class ProfileState {
 // Notifier
 class ProfileNotifier extends StateNotifier<ProfileState> {
   final ProfileRepository _repository;
+  final AuthRepository _authRepository;
 
-  ProfileNotifier(this._repository) : super(const ProfileState()) {
+  ProfileNotifier(this._repository, this._authRepository) : super(const ProfileState()) {
     getProfile();
   }
 
@@ -65,7 +67,23 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       await _repository.updateProfile(newProfile);
-      // Refresh to ensure we have the latest (or just merge locally)
+      
+      // Sync with Auth (Backend)
+      final currentUser = await _authRepository.getCurrentUser();
+      if (currentUser != null) {
+        final updatedUser = currentUser.copyWith(
+          name: newProfile.name,
+          email: newProfile.email,
+          phone: newProfile.phone,
+          phone2: newProfile.phone2,
+          address: newProfile.address1,
+          address2: newProfile.address2,
+          photoUrl: newProfile.photoBytes != null ? null : currentUser.photoUrl, // Not syncing bytes here yet
+        );
+        await _authRepository.updateUser(updatedUser);
+      }
+
+      // Refresh to ensure we have the latest
       final profile = await _repository.getProfile();
       state = state.copyWith(profile: profile, isLoading: false);
     } catch (e) {
@@ -116,5 +134,6 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 // Provider
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
   final repository = ref.watch(profileRepositoryProvider);
-  return ProfileNotifier(repository);
+  final authRepository = ref.watch(authRepositoryProvider);
+  return ProfileNotifier(repository, authRepository);
 });

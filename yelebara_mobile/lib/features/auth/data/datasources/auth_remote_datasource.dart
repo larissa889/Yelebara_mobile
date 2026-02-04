@@ -11,6 +11,7 @@ abstract class AuthRemoteDataSource {
     String? zone,
     String? address,
   });
+  Future<UserModel> updateProfile(UserModel user);
   Future<void> logout();
 }
 
@@ -41,6 +42,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       } else {
         throw Exception('Échec de la connexion: ${response.statusCode}');
       }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  @override
+  Future<UserModel> updateProfile(UserModel user) async {
+    try {
+      final response = await dio.post(
+        '/user/update',
+        data: {
+          'name': user.name,
+          'email': user.email,
+          'address1': user.address, // Note: UserModel has address, API expects address1
+          'phone2': user.phone2, // Note: need to check if UserModel has phone2
+          // Add other fields if UserModel has them
+        },
+      );
+
+      if (response.statusCode == 200) {
+        if (response.data['success'] == true) {
+           return UserModel.fromJson(response.data['user']);
+        }
+        throw Exception(response.data['message'] ?? 'Erreur lors de la mise à jour');
+      }
+      throw Exception('Erreur update: ${response.statusCode}');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }

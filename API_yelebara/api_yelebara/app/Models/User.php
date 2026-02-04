@@ -12,8 +12,17 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'name', 'phone', 'email', 'password', 'role', 'status',
-        'address1', 'address2', 'phone2', 'zone', 'photo'
+        'name',
+        'phone',
+        'email',
+        'password',
+        'role',
+        'status',
+        'address1',
+        'address2',
+        'phone2',
+        'zone',
+        'photo'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -46,6 +55,11 @@ class User extends Authenticatable
     public function scopePendingPresseurs($query)
     {
         return $query->where('role', 'presseur')
-                    ->where('status', 'pending');
+            ->where('status', 'pending');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
     }
 }

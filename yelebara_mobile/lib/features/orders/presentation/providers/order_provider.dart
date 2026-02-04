@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:yelebara_mobile/features/orders/data/datasources/order_local_datasource.dart';
+import 'package:yelebara_mobile/core/network/api_client.dart';
+import 'package:yelebara_mobile/features/orders/data/datasources/order_remote_datasource.dart';
 import 'package:yelebara_mobile/features/orders/data/repositories/order_repository_impl.dart';
 import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
 import 'package:yelebara_mobile/features/orders/domain/repositories/order_repository.dart';
@@ -11,8 +13,16 @@ final orderLocalDataSourceProvider = Provider<OrderLocalDataSource>((ref) {
   return OrderLocalDataSource(prefs);
 });
 
+final orderRemoteDataSourceProvider = Provider<OrderRemoteDataSource>((ref) {
+  final dio = ref.watch(apiClientProvider);
+  return OrderRemoteDataSourceImpl(dio: dio);
+});
+
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {
-  return OrderRepositoryImpl(ref.watch(orderLocalDataSourceProvider));
+  return OrderRepositoryImpl(
+    ref.watch(orderLocalDataSourceProvider),
+    ref.watch(orderRemoteDataSourceProvider),
+  );
 });
 
 // State

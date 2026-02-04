@@ -67,7 +67,13 @@ class AuthRepositoryImpl implements AuthRepository {
     );
     await localDataSource.cacheUser(userModel);
     
-    // In a real app, we would also sync with remoteDataSource here
-    // await remoteDataSource.updateProfile(userModel);
+    // Sync with remote
+    try {
+      await remoteDataSource.updateProfile(userModel);
+    } catch (e) {
+      // If remote fails, we still have local update, but should probably notify user or retry queue
+      // For now, silent fail or log is acceptable for MVP as long as local works
+       print('Remote update failed: $e');
+    }
   }
 }

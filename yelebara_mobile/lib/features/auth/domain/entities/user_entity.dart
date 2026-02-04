@@ -5,6 +5,8 @@ class UserEntity {
   final String role; // 'client' | 'presseur'
   final String? zone;
   final String? address;
+  final String? address2;
+  final String? phone2;
   final String? photoUrl;
   final String? email;
 
@@ -15,6 +17,8 @@ class UserEntity {
     required this.role,
     this.zone,
     this.address,
+    this.address2,
+    this.phone2,
     this.photoUrl,
     this.email,
   });
@@ -26,6 +30,8 @@ class UserEntity {
     String? role,
     String? zone,
     String? address,
+    String? address2,
+    String? phone2,
     String? photoUrl,
     String? email,
   }) {
@@ -36,6 +42,8 @@ class UserEntity {
       role: role ?? this.role,
       zone: zone ?? this.zone,
       address: address ?? this.address,
+      address2: address2 ?? this.address2,
+      phone2: phone2 ?? this.phone2,
       photoUrl: photoUrl ?? this.photoUrl,
       email: email ?? this.email,
     );

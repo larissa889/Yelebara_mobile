@@ -134,4 +134,27 @@ class OrderModel extends OrderEntity {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel.fromMap(json);
+
+  Map<String, dynamic> toJson() => toMap();
+
+  OrderEntity toEntity() {
+    return OrderEntity(
+      id: id,
+      serviceTitle: serviceTitle,
+      servicePrice: servicePrice,
+      amount: amount,
+      date: date,
+      time: time,
+      pickupAtHome: pickupAtHome,
+      instructions: instructions,
+      serviceIcon: serviceIcon,
+      serviceColor: serviceColor,
+      status: status,
+      paymentMethod: paymentMethod,
+      transactionId: transactionId,
+      createdAt: createdAt,
+    );
+  }
 }

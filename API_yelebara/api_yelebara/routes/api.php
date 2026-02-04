@@ -16,6 +16,12 @@ Route::get('/zones', [ZoneController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/user/update', [AuthController::class, 'updateProfile']);
+
+    // Routes Orders
+    Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index']);
+    Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store']);
+    Route::get('/orders/{id}', [App\Http\Controllers\OrderController::class, 'show']);
 
     // Routes admin
     Route::middleware('role:admin')->prefix('admin')->group(function () {

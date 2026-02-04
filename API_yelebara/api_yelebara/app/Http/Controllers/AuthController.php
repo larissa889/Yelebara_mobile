@@ -44,7 +44,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $validated['role'] === 'presseur' 
+            'message' => $validated['role'] === 'presseur'
                 ? 'Inscription réussie. En attente de validation par un administrateur.'
                 : 'Inscription réussie !',
             'user' => $user,
@@ -126,6 +126,32 @@ class AuthController extends Controller
     }
 
     /**
+     * Mise à jour du profil
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,' . $user->id,
+            'address1' => 'nullable|string',
+            'address2' => 'nullable|string',
+            'phone2' => 'nullable|string',
+            // 'photo' => 'nullable|image', // Si envoi fichier
+            // Pour l'instant on accepte juste update texte ou URL si géré autrement
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil mis à jour avec succès',
+            'user' => $user
+        ]);
+    }
+
+    /**
      * Réinitialisation de mot de passe (envoi du code)
      */
     public function sendResetCode(Request $request)
@@ -135,10 +161,10 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('phone', $validated['phone'])->first();
-        
+
         // TODO: Implémenter l'envoi du code par SMS
         $resetCode = rand(100000, 999999);
-        
+
         // Stocker temporairement (utiliser cache en production)
         cache()->put("reset_code_{$user->phone}", $resetCode, now()->addMinutes(10));
 

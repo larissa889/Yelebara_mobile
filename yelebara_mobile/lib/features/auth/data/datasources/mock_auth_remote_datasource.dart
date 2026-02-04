@@ -3,6 +3,11 @@ import 'package:yelebara_mobile/features/auth/data/models/user_model.dart';
 
 class MockAuthRemoteDataSource implements AuthRemoteDataSource {
   @override
+  Future<UserModel> updateProfile(UserModel user) async {
+    return user;
+  }
+
+  @override
   Future<UserModel> login(String phone, String password) async {
     await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
     // Mock successful login
