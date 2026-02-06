@@ -109,28 +109,21 @@ class HomePage extends ConsumerWidget {
               children: [
                 _serviceCard(
                   context,
-                  icon: Icons.local_laundry_service,
+                  imagePath: 'assets/images/lavage_simple.png',
                   title: 'Lavage simple',
-                  price: 'à partir de 500 F',
+                  icon: Icons.local_laundry_service,
                 ),
                 _serviceCard(
                   context,
-                  icon: Icons.iron_rounded, // Changed from Icons.iron to ensure compatibility
+                  imagePath: 'assets/images/repassage.png',
                   title: 'Repassage',
-                  price: 'à partir de 300 F',
+                  icon: Icons.iron_rounded,
                 ),
                 _serviceCard(
                   context,
-                  icon: Icons.checkroom,
+                  imagePath: 'assets/images/pressing_complet.png',
                   title: 'Pressing complet',
-                  price: 'à partir de 1000 F',
-                ),
-                _serviceCard(
-                  context,
-                  icon: Icons.calculate,
-                  title: 'Calculateur de prix',
-                  price: 'Estimer le coût',
-                  isCalculator: true,
+                  icon: Icons.checkroom,
                 ),
               ],
             ),
@@ -146,10 +139,9 @@ class HomePage extends ConsumerWidget {
 
   Widget _serviceCard(
     BuildContext context, {
-    required IconData icon,
+    required String imagePath,
     required String title,
-    required String price,
-    bool isCalculator = false,
+    required IconData icon,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -169,7 +161,14 @@ class HomePage extends ConsumerWidget {
               color: colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: colorScheme.primary),
+            child: Image.asset(
+              imagePath,
+              width: 28,
+              height: 28,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(Icons.image, color: colorScheme.primary);
+              },
+            ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -178,37 +177,35 @@ class HomePage extends ConsumerWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            price,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
           const Spacer(),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                if (!isCalculator) {
-                  context.push(
-                    '/create-order',
-                    extra: {
-                      'serviceTitle': title,
-                      'servicePrice': price,
-                      'serviceIcon': icon,
-                      'serviceColor': colorScheme.primary, // Using primary since internal color logic is gone
-                    },
-                  );
-                }
+                context.push(
+                  '/create-order',
+                  extra: {
+                    'serviceTitle': title,
+                    'serviceIcon': icon,
+                    'serviceColor': colorScheme.primary,
+                  },
+                );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCalculator
-                    ? Colors.teal
-                    : colorScheme.primary,
+                backgroundColor: colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const FittedBox(child: Text('Commander', style: TextStyle(color: Colors.white))),
+              child: FittedBox(
+                child: Text(
+                  'Commander', 
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

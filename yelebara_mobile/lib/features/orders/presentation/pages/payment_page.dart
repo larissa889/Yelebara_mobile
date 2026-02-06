@@ -1,21 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
-import 'package:yelebara_mobile/features/orders/data/services/payment_service.dart';
-import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
+import 'dart:io';
 
 class PaymentPage extends ConsumerStatefulWidget {
-  final OrderEntity order;
+  final String serviceTitle;
+  final IconData serviceIcon;
+  final Color serviceColor;
+  final DateTime selectedDate;
+  final TimeOfDay selectedTime;
+  final bool pickupAtHome;
+  final String instructions;
+  final Map<String, dynamic> clothingSelection;
+  final int totalItems;
+  final int finalPrice;
+  final String formattedPrice;
+  final String deliveryAddress;
+  final File? housePhoto;
+  final bool useCurrentLocation;
 
-  const PaymentPage({Key? key, required this.order}) : super(key: key);
+  const PaymentPage({
+    Key? key,
+    required this.serviceTitle,
+    required this.serviceIcon,
+    required this.serviceColor,
+    required this.selectedDate,
+    required this.selectedTime,
+    required this.pickupAtHome,
+    required this.instructions,
+    required this.clothingSelection,
+    required this.totalItems,
+    required this.finalPrice,
+    required this.formattedPrice,
+    required this.deliveryAddress,
+    this.housePhoto,
+    required this.useCurrentLocation,
+  }) : super(key: key);
 
   @override
   ConsumerState<PaymentPage> createState() => _PaymentPageState();
 }
 
+enum PaymentMethod {
+  orangeMoney,
+  moovMoney,
+  wave,
+  cash,
+}
+
+extension PaymentMethodExtension on PaymentMethod {
+  String get displayName {
+    switch (this) {
+      case PaymentMethod.orangeMoney:
+        return 'Orange Money';
+      case PaymentMethod.moovMoney:
+        return 'Moov Money';
+      case PaymentMethod.wave:
+        return 'Wave';
+      case PaymentMethod.cash:
+        return 'Espèces';
+    }
+  }
+
+  String get logoName {
+    switch (this) {
+      case PaymentMethod.orangeMoney:
+        return 'orange';
+      case PaymentMethod.moovMoney:
+        return 'moov';
+      case PaymentMethod.wave:
+        return 'wave';
+      case PaymentMethod.cash:
+        return 'cash';
+    }
+  }
+
+  Color get brandColor {
+    switch (this) {
+      case PaymentMethod.orangeMoney:
+        return Colors.orange;
+      case PaymentMethod.moovMoney:
+        return const Color(0xFF00BFA5);
+      case PaymentMethod.wave:
+        return const Color(0xFF00D4AA);
+      case PaymentMethod.cash:
+        return Colors.green;
+    }
+  }
+}
+
 class _PaymentPageState extends ConsumerState<PaymentPage> {
-  PaymentMethod _selectedMethod = PaymentMethod.mobileTransfer;
+  PaymentMethod _selectedMethod = PaymentMethod.orangeMoney;
   final _phoneController = TextEditingController();
   bool _isProcessing = false;
 
@@ -25,12 +99,109 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     super.dispose();
   }
 
+  void _processPayment() async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      // Simuler le traitement du paiement
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (!mounted) return;
+
+      setState(() {
+        _isProcessing = false;
+      });
+
+      // Afficher le succès
+      _showPaymentSuccessDialog();
+
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors du paiement: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showPaymentSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              const SizedBox(width: 12),
+              const Text('Paiement réussi'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Votre commande a été enregistrée avec succès !',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Numéro de commande: #${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: widget.serviceColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Le livreur passera à l\'adresse indiquée le ${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year} à ${widget.selectedTime.hour}:${widget.selectedTime.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Mode de paiement: ${_selectedMethod.displayName}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Fermer le dialog
+                Navigator.of(context).popUntil((route) => route.isFirst); // Retour à l'accueil
+              },
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: widget.serviceColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paiement'),
-        backgroundColor: Colors.green,
+        title: const Text('Mode de paiement'),
+        backgroundColor: widget.serviceColor,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -59,39 +230,34 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Récapitulatif de la commande',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Divider(height: 24),
             Row(
               children: [
-                Icon(widget.order.serviceIcon, color: widget.order.serviceColor),
-                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.serviceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(widget.serviceIcon, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.order.serviceTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      Text(
-                        DateFormat('dd/MM/yyyy à HH:mm').format(
-                          DateTime(
-                            widget.order.date.year,
-                            widget.order.date.month,
-                            widget.order.date.day,
-                            widget.order.time.hour,
-                            widget.order.time.minute,
-                          ),
+                        widget.serviceTitle,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year} à ${widget.selectedTime.hour}:${widget.selectedTime.minute.toString().padLeft(2, '0')}',
                         style: TextStyle(
                           color: Colors.grey.shade600,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -99,27 +265,60 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ),
               ],
             ),
-            const Divider(height: 24),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Montant total',
+                Text(
+                  '${widget.totalItems} articles',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Colors.grey.shade700,
                   ),
                 ),
                 Text(
-                  '${widget.order.amount.toStringAsFixed(0)} FCFA',
+                  widget.formattedPrice,
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.green.shade700,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: widget.serviceColor,
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.grey.shade600, size: 16),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    widget.deliveryAddress,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (widget.housePhoto != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.photo, color: Colors.grey.shade600, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Photo de la maison ajoutée',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -131,81 +330,203 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Méthode de paiement',
+          'Choisissez un mode de paiement',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Mobile Money
+        const Text(
+          'Mobile Money',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+            color: Colors.grey,
           ),
         ),
-        const SizedBox(height: 12),
-        _buildPaymentMethodOption(
-          PaymentMethod.mobileTransfer,
-          'Orange Money / Moov Money',
-          'Paiement rapide et sécurisé',
+        const SizedBox(height: 8),
+        
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _buildPaymentMethodCard(PaymentMethod.orangeMoney),
+            _buildPaymentMethodCard(PaymentMethod.moovMoney),
+            _buildPaymentMethodCard(PaymentMethod.wave),
+          ],
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Autres modes
+        const Text(
+          'Autres modes',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          ),
         ),
         const SizedBox(height: 8),
-        _buildPaymentMethodOption(
-          PaymentMethod.creditCard,
-          'Carte bancaire',
-          'Visa, Mastercard acceptées',
-        ),
-        const SizedBox(height: 8),
-        _buildPaymentMethodOption(
-          PaymentMethod.cash,
-          'Espèces à la livraison',
-          'Paiement en main propre',
-        ),
+        
+        _buildPaymentMethodCard(PaymentMethod.cash),
       ],
     );
   }
 
-  Widget _buildPaymentMethodOption(
-    PaymentMethod method,
-    String title,
-    String subtitle,
-  ) {
+  Widget _buildPaymentMethodCard(PaymentMethod method) {
     final isSelected = _selectedMethod == method;
-    return Card(
-      elevation: isSelected ? 3 : 1,
-      color: isSelected ? Colors.green.shade50 : null,
-      child: InkWell(
-        onTap: () => setState(() => _selectedMethod = method),
-        borderRadius: BorderRadius.circular(12),
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedMethod = method;
+        });
+      },
+      child: Container(
+        width: method == PaymentMethod.cash ? double.infinity : 120,
+        height: method == PaymentMethod.cash ? 80 : 80,
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected ? method.brandColor : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? method.brandColor.withOpacity(0.1) : Colors.white,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? method.brandColor : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getPaymentIcon(method),
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              method.displayName,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? method.brandColor : Colors.grey.shade700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getPaymentIcon(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.orangeMoney:
+        return Icons.smartphone;
+      case PaymentMethod.moovMoney:
+        return Icons.smartphone;
+      case PaymentMethod.wave:
+        return Icons.wifi;
+      case PaymentMethod.cash:
+        return Icons.money;
+    }
+  }
+
+  Widget _buildPaymentForm() {
+    if (_selectedMethod == PaymentMethod.orangeMoney || 
+        _selectedMethod == PaymentMethod.moovMoney || 
+        _selectedMethod == PaymentMethod.wave) {
+      return Card(
+        elevation: 2,
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Radio<PaymentMethod>(
-                value: method,
-                groupValue: _selectedMethod,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedMethod = value);
-                  }
-                },
-                activeColor: Colors.green,
-              ),
-              Icon(
-                PaymentService.getPaymentMethodIcon(method),
-                color: isSelected ? Colors.green.shade700 : Colors.grey.shade600,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.green.shade700 : null,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _selectedMethod.brandColor,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                    child: Icon(
+                      _getPaymentIcon(_selectedMethod),
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Numéro ${_selectedMethod.displayName}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Entrez votre numéro pour le paiement',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Numéro de téléphone',
+                  hintText: 'Ex: +226 XX XX XX XX',
+                  prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: _selectedMethod.brandColor, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _selectedMethod.brandColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: _selectedMethod.brandColor, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Vous recevrez une demande de confirmation sur votre téléphone ${_selectedMethod.displayName} pour valider le paiement de ${widget.formattedPrice}',
+                        style: TextStyle(
+                          color: _selectedMethod.brandColor.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -214,123 +535,62 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentForm() {
-    if (_selectedMethod == PaymentMethod.mobileTransfer) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Numéro de téléphone',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _phoneController,
-            decoration: InputDecoration(
-              hintText: 'Ex: 70 12 34 56',
-              prefixIcon: const Icon(Icons.phone),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            keyboardType: TextInputType.phone,
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Vous recevrez un message pour confirmer le paiement',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
+      );
+    } else if (_selectedMethod == PaymentMethod.cash) {
+      return Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
+                child: Icon(Icons.money, color: Colors.green.shade600, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paiement à la livraison',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Payez directement au livreur lors de la remise de votre linge',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Montant à préparer: ${widget.formattedPrice}',
+                      style: TextStyle(
+                        color: Colors.green.shade600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      );
-    } else if (_selectedMethod == PaymentMethod.creditCard) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.credit_card, size: 48, color: Colors.grey.shade600),
-            const SizedBox(height: 12),
-            Text(
-              'Paiement par carte bancaire',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Vous serez redirigé vers une page sécurisée',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.orange.shade200),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.money, size: 48, color: Colors.orange.shade700),
-            const SizedBox(height: 12),
-            Text(
-              'Paiement en espèces',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.orange.shade700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Préparez le montant exact pour le livreur',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange.shade700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       );
     }
+    
+    return const SizedBox.shrink();
   }
 
   Widget _buildPayButton() {
@@ -339,188 +599,37 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       child: ElevatedButton(
         onPressed: _isProcessing ? null : _processPayment,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: widget.serviceColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: _isProcessing
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Traitement en cours...'),
+                ],
               )
-            : Text(
-                _selectedMethod == PaymentMethod.cash
-                    ? 'Confirmer la commande'
-                    : 'Payer ${widget.order.amount.toStringAsFixed(0)} FCFA',
-                style: const TextStyle(
+            : const Text(
+                'Payer maintenant',
+                style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
       ),
     );
-  }
-
-  Future<void> _processPayment() async {
-    if (_selectedMethod == PaymentMethod.mobileTransfer &&
-        _phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez entrer votre numéro de téléphone'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isProcessing = true);
-
-    try {
-      PaymentResult result;
-
-      if (_selectedMethod == PaymentMethod.cash) {
-        // Pour le paiement en espèces, on confirme directement
-        result = PaymentResult(
-          success: true,
-          message: 'Commande confirmée. Paiement à la livraison.',
-        );
-      } else {
-        // Simuler le processus de paiement
-        result = await PaymentService.processPayment(
-          order: widget.order,
-          method: _selectedMethod,
-          phoneNumber: _phoneController.text,
-        );
-      }
-
-      if (result.success) {
-        // Mettre à jour le statut de la commande via Provider
-        final updatedOrder = widget.order.copyWith(
-          status: _selectedMethod == PaymentMethod.cash
-              ? OrderStatus.pending
-              : OrderStatus.paid,
-          paymentMethod: _selectedMethod,
-          transactionId: result.transactionId,
-        );
-        
-        await ref.read(orderProvider.notifier).updateOrder(updatedOrder);
-
-        if (!mounted) return;
-
-        // Afficher le succès
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.check_circle,
-                    size: 64,
-                    color: Colors.green.shade600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _selectedMethod == PaymentMethod.cash
-                      ? 'Commande confirmée !'
-                      : 'Paiement réussi !',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  result.message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                if (result.transactionId != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Ref: ${result.transactionId}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pop(context, true);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        // Afficher l'erreur
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red.shade600),
-                const SizedBox(width: 8),
-                const Text('Échec du paiement'),
-              ],
-            ),
-            content: Text(result.message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Réessayer'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
   }
 }

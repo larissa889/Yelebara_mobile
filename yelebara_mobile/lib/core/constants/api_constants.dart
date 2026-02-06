@@ -12,7 +12,7 @@ class ApiConstants {
 
   // OPTION 3: REAL DEVICE / NETWORK (Your detected IP)
   // This allows devices on the same WiFi to connect to this machine.
-  static const String baseUrl = 'http://192.168.10.105:8000/api';
+  static const String baseUrl = 'http://192.168.11.54:8000/api';
 
   // ---------------------------------------------------------------------------
   

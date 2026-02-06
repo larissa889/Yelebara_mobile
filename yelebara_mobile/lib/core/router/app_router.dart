@@ -9,6 +9,8 @@ import 'package:yelebara_mobile/features/home/presentation/pages/home_page.dart'
 import 'package:yelebara_mobile/features/admin/presentation/pages/admin_home_page.dart';
 import 'package:yelebara_mobile/features/presseur/presentation/pages/presseur_home_page.dart';
 import 'package:yelebara_mobile/features/orders/presentation/pages/create_order_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/pages/clothing_selection_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/pages/location_selection_page.dart';
 import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
 import 'package:yelebara_mobile/features/beneficiaries/presentation/pages/beneficiary_directory_page.dart';
 import 'package:yelebara_mobile/features/orders/presentation/pages/orders_page.dart';
@@ -55,10 +57,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final extras = state.extra as Map<String, dynamic>;
           return CreateOrderPage(
             serviceTitle: extras['serviceTitle'] as String,
-            servicePrice: extras['servicePrice'] as String,
+            servicePrice: extras['servicePrice'] as String?,
             serviceIcon: extras['serviceIcon'] as IconData,
             serviceColor: extras['serviceColor'] as Color,
             existingOrder: extras['existingOrder'] as OrderEntity?,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/clothing-selection',
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>;
+          return ClothingSelectionPage(
+            serviceTitle: extras['serviceTitle'] as String,
+            serviceIcon: extras['serviceIcon'] as IconData,
+            serviceColor: extras['serviceColor'] as Color,
+            selectedDate: extras['selectedDate'] as DateTime,
+            selectedTime: extras['selectedTime'] as TimeOfDay,
+            pickupAtHome: extras['pickupAtHome'] as bool,
+            instructions: extras['instructions'] as String,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/location-selection',
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>;
+          return LocationSelectionPage(
+            serviceTitle: extras['serviceTitle'] as String,
+            serviceIcon: extras['serviceIcon'] as IconData,
+            serviceColor: extras['serviceColor'] as Color,
+            selectedDate: extras['selectedDate'] as DateTime,
+            selectedTime: extras['selectedTime'] as TimeOfDay,
+            pickupAtHome: extras['pickupAtHome'] as bool,
+            instructions: extras['instructions'] as String,
+            clothingSelection: extras['clothingSelection'] as Map<String, dynamic>,
+            totalItems: extras['totalItems'] as int,
+            finalPrice: extras['finalPrice'] as int,
+            formattedPrice: extras['formattedPrice'] as String,
           );
         },
       ),

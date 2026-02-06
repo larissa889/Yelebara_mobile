@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
 import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
+import 'clothing_selection_page.dart';
 
 class CreateOrderPage extends ConsumerStatefulWidget {
   final String serviceTitle;
-  final String servicePrice;
+  final String? servicePrice;
   final IconData serviceIcon;
   final Color serviceColor;
   final OrderEntity? existingOrder;
@@ -14,7 +15,7 @@ class CreateOrderPage extends ConsumerStatefulWidget {
   const CreateOrderPage({
     Key? key,
     required this.serviceTitle,
-    required this.servicePrice,
+    this.servicePrice,
     required this.serviceIcon,
     required this.serviceColor,
     this.existingOrder,
@@ -27,7 +28,6 @@ class CreateOrderPage extends ConsumerStatefulWidget {
 class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
   final _formKey = GlobalKey<FormState>();
   final _instructionsController = TextEditingController();
-  final _amountController = TextEditingController();
   
   bool _pickupAtHome = true;
   DateTime? _selectedDate;
@@ -42,21 +42,12 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       _selectedTime = e.time;
       _pickupAtHome = e.pickupAtHome;
       _instructionsController.text = e.instructions;
-      _amountController.text = e.amount.toStringAsFixed(0);
-    } else {
-      try {
-        final priceMatch = RegExp(r'\d+').firstMatch(widget.servicePrice);
-        if (priceMatch != null) {
-          _amountController.text = priceMatch.group(0)!;
-        }
-      } catch (_) {}
     }
   }
 
   @override
   void dispose() {
     _instructionsController.dispose();
-    _amountController.dispose();
     super.dispose();
   }
 
@@ -79,8 +70,6 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
             children: [
               _buildServiceCard(),
               const SizedBox(height: 20),
-              _buildAmountField(),
-              const SizedBox(height: 16),
               _buildPickupSwitch(),
               const SizedBox(height: 16),
               _buildDateTimePickers(),
@@ -112,29 +101,8 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
           widget.serviceTitle,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(widget.servicePrice),
+        subtitle: Text(widget.servicePrice ?? 'Prix sur demande'),
       ),
-    );
-  }
-
-  Widget _buildAmountField() {
-    return TextFormField(
-      controller: _amountController,
-      decoration: InputDecoration(
-        labelText: 'Montant (FCFA)',
-        prefixIcon: const Icon(Icons.attach_money),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      keyboardType: TextInputType.number,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Veuillez entrer le montant';
-        }
-        if (double.tryParse(value) == null) {
-          return 'Montant invalide';
-        }
-        return null;
-      },
     );
   }
 
@@ -201,26 +169,29 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
   }
 
   Widget _buildSubmitButton() {
-    final isLoading = ref.watch(orderProvider).isLoading;
-    return ElevatedButton(
-      onPressed: isLoading ? null : _submitOrder,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: widget.serviceColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      child: isLoading 
-        ? const CircularProgressIndicator(color: Colors.white)
-        : Text(
-            widget.existingOrder == null 
-              ? 'Créer la commande' 
-              : 'Enregistrer les modifications',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _validateAndProceed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: widget.serviceColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
+        ),
+        child: Text(
+          widget.existingOrder == null ? 'Continuer' : 'Modifier la commande',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
-  
+
   Future<void> _selectDate() async {
     final date = await showDatePicker(
       context: context,
@@ -267,6 +238,33 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
     if (time != null) setState(() => _selectedTime = time);
   }
 
+  Future<void> _validateAndProceed() async {
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Veuillez sélectionner la date et l\'heure'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Navigation vers la page de sélection de vêtements
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ClothingSelectionPage(
+          serviceTitle: widget.serviceTitle,
+          serviceIcon: widget.serviceIcon,
+          serviceColor: widget.serviceColor,
+          selectedDate: _selectedDate!,
+          selectedTime: _selectedTime!,
+          pickupAtHome: _pickupAtHome,
+          instructions: _instructionsController.text.trim(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -280,7 +278,6 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       return;
     }
 
-    final amount = double.parse(_amountController.text);
     final notifier = ref.read(orderProvider.notifier);
 
     if (widget.existingOrder != null) {
@@ -288,8 +285,8 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       final updatedOrder = OrderEntity(
         id: widget.existingOrder!.id,
         serviceTitle: widget.serviceTitle, 
-        servicePrice: widget.servicePrice,
-        amount: amount,
+        servicePrice: widget.servicePrice ?? 'Prix sur demande',
+        amount: 0,
         date: _selectedDate!,
         time: _selectedTime!,
         pickupAtHome: _pickupAtHome,
@@ -307,8 +304,8 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       final order = OrderEntity(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         serviceTitle: widget.serviceTitle,
-        servicePrice: widget.servicePrice,
-        amount: amount,
+        servicePrice: widget.servicePrice ?? 'Prix sur demande',
+        amount: 0,
         date: _selectedDate!,
         time: _selectedTime!,
         pickupAtHome: _pickupAtHome,
