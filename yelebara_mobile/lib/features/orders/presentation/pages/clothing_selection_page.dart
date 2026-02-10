@@ -7,7 +7,10 @@ import 'location_selection_page.dart';
 import 'payment_page.dart';
 
 class ClothingSelectionProvider extends StateNotifier<Map<ClothingType, int>> {
-  ClothingSelectionProvider() : super({});
+  ClothingSelectionProvider({required this.pickupAtHome, required this.serviceType}) : super({});
+
+  final bool pickupAtHome;
+  final String serviceType;
 
   void toggleClothing(ClothingType type, int quantity) {
     final newState = Map<ClothingType, int>.from(state);
@@ -25,14 +28,29 @@ class ClothingSelectionProvider extends StateNotifier<Map<ClothingType, int>> {
     state = {};
   }
 
-  CalculationResult get calculationResult => ClothingCalculator.calculatePrice(
-    state,
-    pickupAtHome: false, // Temporairement fixé pour éviter l'erreur
-  );
+  CalculationResult get calculationResult {
+    // Utiliser la méthode de calcul appropriée selon le service
+    if (serviceType.toLowerCase().contains('pressing complet')) {
+      return ClothingCalculator.calculateFullPressingPrice(
+        state,
+        pickupAtHome: true, // Livraison obligatoire pour le pressing complet
+      );
+    } else if (serviceType.toLowerCase().contains('repassage')) {
+      return ClothingCalculator.calculateIroningPrice(
+        state,
+        pickupAtHome: true, // Livraison obligatoire pour le repassage
+      );
+    } else {
+      return ClothingCalculator.calculatePrice(
+        state,
+        pickupAtHome: pickupAtHome,
+      );
+    }
+  }
 }
 
-final clothingSelectionProvider = StateNotifierProvider<ClothingSelectionProvider, Map<ClothingType, int>>((ref) {
-  return ClothingSelectionProvider();
+final clothingSelectionProvider = StateNotifierProvider.family<ClothingSelectionProvider, Map<ClothingType, int>, ({bool pickupAtHome, String serviceType})>((ref, params) {
+  return ClothingSelectionProvider(pickupAtHome: params.pickupAtHome, serviceType: params.serviceType);
 });
 
 class ClothingSelectionPage extends ConsumerStatefulWidget {
@@ -70,7 +88,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
   
   @override
   Widget build(BuildContext context) {
-    final calculationResult = ref.watch(clothingSelectionProvider.notifier).calculationResult;
+    final calculationResult = ref.watch(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).calculationResult;
     
     return Scaffold(
       appBar: AppBar(
@@ -186,10 +204,10 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                   } else {
                     selectedPersonTypes.remove(personType);
                     // Supprimer les vêtements de ce type
-                    final currentSelection = ref.read(clothingSelectionProvider);
+                    final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
                     final newSelection = Map<ClothingType, int>.from(currentSelection);
                     newSelection.removeWhere((key, value) => key.personType == personType);
-                    ref.read(clothingSelectionProvider.notifier).state = newSelection;
+                    ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).state = newSelection;
                   }
                 });
               },
@@ -228,7 +246,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
   }
 
   Widget _buildClothingItem(ClothingType clothingType) {
-    final currentSelection = ref.watch(clothingSelectionProvider);
+    final currentSelection = ref.watch(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
     final quantity = currentSelection[clothingType] ?? 0;
     
     return Card(
@@ -242,9 +260,9 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
               value: quantity > 0,
               onChanged: (value) {
                 if (value == true) {
-                  ref.read(clothingSelectionProvider.notifier).toggleClothing(clothingType, 1);
+                  ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 1);
                 } else {
-                  ref.read(clothingSelectionProvider.notifier).toggleClothing(clothingType, 0);
+                  ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 0);
                 }
               },
               activeColor: widget.serviceColor,
@@ -272,9 +290,9 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                       icon: const Icon(Icons.remove, size: 20),
                       onPressed: () {
                         if (quantity > 1) {
-                          ref.read(clothingSelectionProvider.notifier).toggleClothing(clothingType, quantity - 1);
+                          ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity - 1);
                         } else {
-                          ref.read(clothingSelectionProvider.notifier).toggleClothing(clothingType, 0);
+                          ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 0);
                         }
                       },
                       color: widget.serviceColor,
@@ -293,7 +311,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                     IconButton(
                       icon: const Icon(Icons.add, size: 20),
                       onPressed: () {
-                        ref.read(clothingSelectionProvider.notifier).toggleClothing(clothingType, quantity + 1);
+                        ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity + 1);
                       },
                       color: widget.serviceColor,
                     ),
@@ -366,7 +384,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           ),
             
             // Afficher les frais de livraison si applicable
-            if (!result.pickupAtHome) ...[
+            if (result.deliveryCharges > 0) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -381,7 +399,11 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Lavage',
+                          widget.serviceTitle.toLowerCase().contains('pressing complet') 
+                              ? 'Pressing complet' 
+                              : widget.serviceTitle.toLowerCase().contains('repassage') 
+                                  ? 'Repassage' 
+                                  : 'Lavage',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade700,
@@ -417,6 +439,32 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                         ),
                       ],
                     ),
+                    if (widget.serviceTitle.toLowerCase().contains('repassage') || widget.serviceTitle.toLowerCase().contains('pressing complet')) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info, color: Colors.blue.shade700, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'La livraison est obligatoire pour ce service',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -428,7 +476,14 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: result.totalItems > 0 ? () => _validateOrder(result) : null,
+              onPressed: result.totalItems > 0 ? () => _validateOrder(result) : () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Veuillez sélectionner au moins un vêtement'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.serviceColor,
                 foregroundColor: Colors.white,

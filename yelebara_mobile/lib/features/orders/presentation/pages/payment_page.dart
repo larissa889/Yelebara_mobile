@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:io';
 
 class PaymentPage extends ConsumerStatefulWidget {
@@ -212,10 +213,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             _buildOrderSummary(),
             const SizedBox(height: 24),
             _buildPaymentMethods(),
-            const SizedBox(height: 24),
-            _buildPaymentForm(),
             const SizedBox(height: 32),
-            _buildPayButton(),
+            // _buildPaymentForm(), // Formulaire de paiement supprimé
+            // _buildPayButton(), // Bouton Payer supprimé
           ],
         ),
       ),
@@ -358,21 +358,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             _buildPaymentMethodCard(PaymentMethod.wave),
           ],
         ),
-        
-        const SizedBox(height: 16),
-        
-        // Autres modes
-        const Text(
-          'Autres modes',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        
-        _buildPaymentMethodCard(PaymentMethod.cash),
       ],
     );
   }
@@ -385,6 +370,22 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         setState(() {
           _selectedMethod = method;
         });
+        
+        // Naviguer vers la page de paiement dédiée
+        switch (method) {
+          case PaymentMethod.orangeMoney:
+            context.push('/payment/orange-money');
+            break;
+          case PaymentMethod.moovMoney:
+            context.push('/payment/moov-money');
+            break;
+          case PaymentMethod.wave:
+            context.push('/payment/wave');
+            break;
+          case PaymentMethod.cash:
+            // Ne rien faire pour l'espèce (si activé)
+            break;
+        }
       },
       child: Container(
         width: method == PaymentMethod.cash ? double.infinity : 120,
@@ -407,10 +408,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 color: isSelected ? method.brandColor : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                _getPaymentIcon(method),
-                color: isSelected ? Colors.white : Colors.grey.shade600,
-                size: 24,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: _getPaymentImage(method),
               ),
             ),
             const SizedBox(height: 4),
@@ -427,6 +427,38 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         ),
       ),
     );
+  }
+
+  Widget _getPaymentImage(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.orangeMoney:
+        return Image.asset(
+          'assets/images/orange_money.png',
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+        );
+      case PaymentMethod.moovMoney:
+        return Image.asset(
+          'assets/images/moov.png',
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+        );
+      case PaymentMethod.wave:
+        return Image.asset(
+          'assets/images/wave_burkina.png',
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+        );
+      case PaymentMethod.cash:
+        return Icon(
+          Icons.money,
+          color: Colors.white,
+          size: 24,
+        );
+    }
   }
 
   IconData _getPaymentIcon(PaymentMethod method) {

@@ -4,6 +4,7 @@ class ClothingCalculator {
   static const int pricePerKg = 500; // FCFA par kg
   static const int priceMultiple = 500; // Multiple pour l'arrondi
   static const int deliveryFee = 1000; // Frais de livraison en FCFA
+  static const int ironingPricePerItem = 50; // FCFA par vêtement pour le repassage
   
   /// Calcule le prix total basé sur les vêtements sélectionnés
   static CalculationResult calculatePrice(
@@ -42,13 +43,15 @@ class ClothingCalculator {
     final washingPrice = weightInKg * pricePerKg;
     
     // Ajout des frais de livraison si nécessaire
-    final deliveryCharges = pickupAtHome ? 0.0 : deliveryFee.toDouble();
+    // Si pickupAtHome = true (livreur vient chercher), frais de livraison applicables
+    // Si pickupAtHome = false (pas de livraison), pas de frais
+    final deliveryCharges = pickupAtHome ? deliveryFee.toDouble() : 0.0;
     
     // Prix brut (lavage + livraison)
     final rawPrice = washingPrice + deliveryCharges;
     
-    // Arrondi au multiple de 500 supérieur
-    final finalPrice = (rawPrice / priceMultiple).ceil() * priceMultiple;
+    // Pas d'arrondi - calcul exact
+    final finalPrice = rawPrice.round().toInt();
     
     return CalculationResult(
       totalWeight: totalWeight,
@@ -62,6 +65,95 @@ class ClothingCalculator {
       pickupAtHome: pickupAtHome,
       calculationMethod: useMaxWeight ? 'Maximum' : 
                       useAverageWeight ? 'Moyen' : 'Minimum',
+    );
+  }
+  
+  /// Calcule le prix pour le repassage (50F par vêtement, livraison obligatoire)
+  static CalculationResult calculateIroningPrice(
+    Map<ClothingType, int> selectedClothes, {
+    bool pickupAtHome = true, // Forcé à true pour le repassage
+  }) {
+    int totalItems = 0;
+    
+    // Calcul du nombre total d'articles
+    for (final entry in selectedClothes.entries) {
+      totalItems += entry.value;
+    }
+    
+    // Calcul du prix du repassage (50F par article)
+    final ironingPrice = (totalItems * ironingPricePerItem).toDouble();
+    
+    // Pour le repassage, la livraison est obligatoire
+    final deliveryCharges = deliveryFee.toDouble();
+    
+    // Prix brut (repassage + livraison)
+    final rawPrice = ironingPrice + deliveryCharges;
+    
+    // Pas d'arrondi - calcul exact
+    final finalPrice = rawPrice.round().toInt();
+    
+    return CalculationResult(
+      totalWeight: 0, // Pas de poids pour le repassage
+      weightInKg: 0,
+      totalItems: totalItems,
+      washingPrice: ironingPrice, // Utilisé comme prix du repassage
+      deliveryCharges: deliveryCharges,
+      rawPrice: rawPrice,
+      finalPrice: finalPrice,
+      selectedClothes: selectedClothes,
+      pickupAtHome: true, // Forcé à true pour le repassage
+      calculationMethod: 'Repassage',
+    );
+  }
+  
+  /// Calcule le prix pour le pressing complet (lavage + repassage, livraison obligatoire)
+  static CalculationResult calculateFullPressingPrice(
+    Map<ClothingType, int> selectedClothes, {
+    bool pickupAtHome = true, // Forcé à true pour le pressing complet
+  }) {
+    double totalWeight = 0;
+    int totalItems = 0;
+    
+    // Calcul du poids total pour le lavage
+    for (final entry in selectedClothes.entries) {
+      final clothingType = entry.key;
+      final quantity = entry.value;
+      
+      if (quantity > 0) {
+        totalWeight += clothingType.averageWeight * quantity;
+        totalItems += quantity;
+      }
+    }
+    
+    // Conversion en kg pour le lavage
+    final weightInKg = totalWeight / 1000;
+    
+    // Calcul du prix du lavage
+    final washingPrice = weightInKg * pricePerKg;
+    
+    // Calcul du prix du repassage (50F par article)
+    final ironingPrice = (totalItems * ironingPricePerItem).toDouble();
+    
+    // Pour le pressing complet, la livraison est obligatoire
+    final deliveryCharges = deliveryFee.toDouble();
+    
+    // Prix brut (lavage + repassage + livraison)
+    final rawPrice = washingPrice + ironingPrice + deliveryCharges;
+    
+    // Pas d'arrondi - calcul exact
+    final finalPrice = rawPrice.round().toInt();
+    
+    return CalculationResult(
+      totalWeight: totalWeight,
+      weightInKg: weightInKg,
+      totalItems: totalItems,
+      washingPrice: washingPrice + ironingPrice, // Lavage + repassage
+      deliveryCharges: deliveryCharges,
+      rawPrice: rawPrice,
+      finalPrice: finalPrice,
+      selectedClothes: selectedClothes,
+      pickupAtHome: true, // Forcé à true pour le pressing complet
+      calculationMethod: 'Pressing complet',
     );
   }
 }

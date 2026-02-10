@@ -109,7 +109,7 @@ class HomePage extends ConsumerWidget {
               children: [
                 _serviceCard(
                   context,
-                  imagePath: 'assets/images/lavage_simple.png',
+                  imagePath: null, // Temporairement null pour utiliser l'icône
                   title: 'Lavage simple',
                   icon: Icons.local_laundry_service,
                 ),
@@ -139,7 +139,7 @@ class HomePage extends ConsumerWidget {
 
   Widget _serviceCard(
     BuildContext context, {
-    required String imagePath,
+    String? imagePath,
     required String title,
     required IconData icon,
   }) {
@@ -161,14 +161,20 @@ class HomePage extends ConsumerWidget {
               color: colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Image.asset(
-              imagePath,
-              width: 28,
-              height: 28,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(Icons.image, color: colorScheme.primary);
-              },
-            ),
+            child: imagePath != null 
+              ? Image.asset(
+                  imagePath,
+                  width: 28,
+                  height: 28,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.image, color: colorScheme.primary);
+                  },
+                )
+              : Icon(
+                  icon,
+                  color: colorScheme.primary,
+                  size: 28,
+                ),
           ),
           const SizedBox(height: 12),
           Text(

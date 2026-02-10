@@ -15,6 +15,9 @@ import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dar
 import 'package:yelebara_mobile/features/beneficiaries/presentation/pages/beneficiary_directory_page.dart';
 import 'package:yelebara_mobile/features/orders/presentation/pages/orders_page.dart';
 import 'package:yelebara_mobile/features/profile/presentation/pages/profile_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/pages/orange_money_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/pages/moov_money_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/pages/wave_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -109,6 +112,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ClientProfilePage(),
+      ),
+      
+      // Payment Routes
+      GoRoute(
+        path: '/payment/orange-money',
+        builder: (context, state) => const OrangeMoneyPage(),
+      ),
+      GoRoute(
+        path: '/payment/moov-money',
+        builder: (context, state) => const MoovMoneyPage(),
+      ),
+      GoRoute(
+        path: '/payment/wave',
+        builder: (context, state) => const WavePage(),
       ),
     ],
   );
