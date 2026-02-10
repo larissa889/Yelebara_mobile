@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'clothing_selection_page.dart';
 import 'payment_page.dart';
 
 class LocationSelectionPage extends ConsumerStatefulWidget {
@@ -144,10 +145,10 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
         ? "Adresse actuelle (tanghin, Ouagadougou)" 
         : _addressController.text.trim();
 
-    // Navigation vers la page de paiement
+    // Navigation vers la page de sélection de vêtements
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => PaymentPage(
+        builder: (context) => ClothingSelectionPage(
           serviceTitle: widget.serviceTitle,
           serviceIcon: widget.serviceIcon,
           serviceColor: widget.serviceColor,
@@ -155,10 +156,6 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
           selectedTime: widget.selectedTime,
           pickupAtHome: widget.pickupAtHome,
           instructions: widget.instructions,
-          clothingSelection: widget.clothingSelection,
-          totalItems: widget.totalItems,
-          finalPrice: widget.finalPrice,
-          formattedPrice: widget.formattedPrice,
           deliveryAddress: address,
           housePhoto: _housePhoto,
           useCurrentLocation: _useCurrentLocation,

@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yelebara_mobile/features/auth/data/models/user_model.dart';
-import 'package:yelebara_mobile/features/auth/data/repositories/auth_repository.dart';
-
+import 'package:yelebara_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:yelebara_mobile/features/auth/domain/entities/user_entity.dart';
+import 'package:yelebara_mobile/features/auth/domain/repositories/auth_repository.dart';
+import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart' as controllers;
 
 // State
 class AuthState {
@@ -85,6 +86,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 // Provider
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
+  final repository = ref.watch(controllers.authRepositoryControllerProvider);
   return AuthNotifier(repository);
 });

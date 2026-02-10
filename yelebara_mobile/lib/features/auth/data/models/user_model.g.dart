@@ -6,6 +6,8 @@ part of 'user_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
   id: json['id'] as String,
   phone: json['phone'] as String,

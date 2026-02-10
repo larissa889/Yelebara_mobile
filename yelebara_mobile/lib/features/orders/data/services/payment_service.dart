@@ -38,20 +38,20 @@ class PaymentService {
 
   static String getPaymentMethodLabel(PaymentMethod method) {
     switch (method) {
-      case PaymentMethod.mobileTransfer:
-        return 'Mobile Money';
-      case PaymentMethod.creditCard:
-        return 'Carte bancaire';
+      case PaymentMethod.orangeMoney:
+        return 'Orange Money';
+      case PaymentMethod.moovMoney:
+        return 'Moov Money';
       case PaymentMethod.cash:
-        return 'Espèces';
+        return 'Cash';
     }
   }
 
   static IconData getPaymentMethodIcon(PaymentMethod method) {
     switch (method) {
-      case PaymentMethod.mobileTransfer:
+      case PaymentMethod.orangeMoney:
         return Icons.phone_android;
-      case PaymentMethod.creditCard:
+      case PaymentMethod.moovMoney:
         return Icons.credit_card;
       case PaymentMethod.cash:
         return Icons.money;

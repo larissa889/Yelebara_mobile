@@ -6,6 +6,7 @@ import 'package:yelebara_mobile/features/profile/data/datasources/profile_local_
 import 'package:yelebara_mobile/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:yelebara_mobile/features/profile/domain/entities/profile_entity.dart';
 import 'package:yelebara_mobile/features/profile/domain/repositories/profile_repository.dart';
+import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart' as auth;
 import 'package:yelebara_mobile/features/auth/domain/repositories/auth_repository.dart';
 
 // Data Source Provider
@@ -134,6 +135,6 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 // Provider
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
   final repository = ref.watch(profileRepositoryProvider);
-  final authRepository = ref.watch(authRepositoryProvider);
+  final authRepository = ref.watch(auth.authRepositoryControllerProvider);
   return ProfileNotifier(repository, authRepository);
 });

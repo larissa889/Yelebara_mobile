@@ -26,10 +26,12 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 });
 
 // Repository Provider
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+final authRepositoryControllerProvider = Provider<AuthRepository>((ref) {
+  final remoteDataSource = ref.watch(authRemoteDataSourceProvider);
+  final localDataSource = ref.watch(authLocalDataSourceProvider);
   return AuthRepositoryImpl(
-    remoteDataSource: ref.watch(authRemoteDataSourceProvider),
-    localDataSource: ref.watch(authLocalDataSourceProvider),
+    remoteDataSource: remoteDataSource,
+    localDataSource: localDataSource,
   );
 });
 
@@ -154,6 +156,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 // Auth Provider
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
+  final repository = ref.watch(authRepositoryControllerProvider);
   return AuthNotifier(repository);
 });

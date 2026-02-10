@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/clothing_model.dart';
 import '../../data/services/clothing_calculator.dart';
+import 'dart:io';
 import 'location_selection_page.dart';
+import 'payment_page.dart';
 
 class ClothingSelectionProvider extends StateNotifier<Map<ClothingType, int>> {
   ClothingSelectionProvider() : super({});
@@ -23,7 +25,10 @@ class ClothingSelectionProvider extends StateNotifier<Map<ClothingType, int>> {
     state = {};
   }
 
-  CalculationResult get calculationResult => ClothingCalculator.calculatePrice(state);
+  CalculationResult get calculationResult => ClothingCalculator.calculatePrice(
+    state,
+    pickupAtHome: false, // Temporairement fixé pour éviter l'erreur
+  );
 }
 
 final clothingSelectionProvider = StateNotifierProvider<ClothingSelectionProvider, Map<ClothingType, int>>((ref) {
@@ -38,6 +43,9 @@ class ClothingSelectionPage extends ConsumerStatefulWidget {
   final TimeOfDay selectedTime;
   final bool pickupAtHome;
   final String instructions;
+  final String? deliveryAddress;
+  final File? housePhoto;
+  final bool useCurrentLocation;
 
   const ClothingSelectionPage({
     Key? key,
@@ -48,6 +56,9 @@ class ClothingSelectionPage extends ConsumerStatefulWidget {
     required this.selectedTime,
     required this.pickupAtHome,
     required this.instructions,
+    this.deliveryAddress,
+    this.housePhoto,
+    this.useCurrentLocation = false,
   }) : super(key: key);
 
   @override
@@ -353,6 +364,63 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
               ),
             ],
           ),
+            
+            // Afficher les frais de livraison si applicable
+            if (!result.pickupAtHome) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Lavage',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Text(
+                          result.formattedWashingPrice,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Livraison',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Text(
+                          result.formattedDeliveryCharges,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           
           const SizedBox(height: 16),
           
@@ -390,10 +458,10 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
       clothingSelectionMap[entry.key.name] = entry.value;
     }
     
-    // Navigation vers la page de localisation
+    // Navigation vers la page de paiement
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => LocationSelectionPage(
+        builder: (context) => PaymentPage(
           serviceTitle: widget.serviceTitle,
           serviceIcon: widget.serviceIcon,
           serviceColor: widget.serviceColor,
@@ -405,6 +473,9 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           totalItems: result.totalItems,
           finalPrice: result.finalPrice,
           formattedPrice: result.formattedPrice,
+          deliveryAddress: widget.deliveryAddress ?? "Adresse actuelle (tanghin, Ouagadougou)",
+          housePhoto: widget.housePhoto,
+          useCurrentLocation: widget.useCurrentLocation ?? true,
         ),
       ),
     );

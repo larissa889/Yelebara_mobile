@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
 import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
-import 'clothing_selection_page.dart';
+import 'location_selection_page.dart';
 
 class CreateOrderPage extends ConsumerStatefulWidget {
   final String serviceTitle;
@@ -249,10 +249,10 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       return;
     }
 
-    // Navigation vers la page de sélection de vêtements
+    // Navigation vers la page de localisation (avec photo)
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ClothingSelectionPage(
+        builder: (context) => LocationSelectionPage(
           serviceTitle: widget.serviceTitle,
           serviceIcon: widget.serviceIcon,
           serviceColor: widget.serviceColor,
@@ -260,6 +260,10 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
           selectedTime: _selectedTime!,
           pickupAtHome: _pickupAtHome,
           instructions: _instructionsController.text.trim(),
+          clothingSelection: {},
+          totalItems: 0,
+          finalPrice: 0,
+          formattedPrice: '0 FCFA',
         ),
       ),
     );
