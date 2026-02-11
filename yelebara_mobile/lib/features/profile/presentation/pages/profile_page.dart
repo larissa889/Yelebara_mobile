@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:yelebara_mobile/features/home/presentation/widgets/client_bottom_nav.dart';
 import 'package:yelebara_mobile/features/orders/presentation/pages/create_order_page.dart';
 import 'package:yelebara_mobile/features/profile/domain/entities/profile_entity.dart';
@@ -160,26 +162,19 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
                       icon: Icons.support_agent_rounded,
                       iconColor: Colors.green,
                       title: 'Contactez-nous',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Contact: support@yelebara.app'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
+                      onTap: _showContactOptions,
                     ),
                      _OptionItem(
                       icon: Icons.star_border_rounded,
                       iconColor: Colors.amber,
                       title: 'Notez l\'application',
-                      onTap: () {},
+                      onTap: _rateApp,
                     ),
                      _OptionItem(
                       icon: Icons.share_rounded,
                       iconColor: Colors.indigo,
                       title: 'Partager l\'application',
-                      onTap: () {},
+                      onTap: _shareApp,
                     ),
                     
                     const SizedBox(height: 32),
@@ -472,6 +467,220 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
       ),
     );
     // Provider updates state automatically, no need to reload manually
+  }
+
+  void _showContactOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Contactez-nous',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Choisissez votre mode de contact',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Option Appel simple
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.phone, color: Colors.blue, size: 24),
+              ),
+              title: const Text(
+                'Appel simple',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text('04 98 05 67'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () => _makePhoneCall('04980567'),
+            ),
+            
+            const Divider(height: 1),
+            
+            // Option WhatsApp
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.message, color: Colors.green, size: 24),
+              ),
+              title: const Text(
+                'WhatsApp',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text('71 88 99 41'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () => _openWhatsApp('71889941'),
+            ),
+            
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: const Text('Annuler'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossible de lancer l\'appel'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openWhatsApp(String phoneNumber) async {
+    final Uri whatsappUri = Uri.parse('https://wa.me/225$phoneNumber');
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossible d\'ouvrir WhatsApp'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rateApp() async {
+    // Pour le web, on redirige vers une page d'avis
+    // Pour mobile, on utiliserait store_review ou in_app_review
+    final Uri rateUri = Uri.parse('https://play.google.com/store/apps/details?id=com.yelebara.app');
+    try {
+      if (await canLaunchUrl(rateUri)) {
+        await launchUrl(rateUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossible d\'ouvrir la page de notation'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareApp() async {
+    final String shareText = 'Découvrez Yélébara - Votre service de pressing à domicile !\n\n'
+        'Lavage, repassage et pressing complet de qualité.\n'
+        'Téléchargez l\'application : https://yelebara.app';
+    
+    try {
+      // Utiliser share_plus pour partager
+      await Share.share(
+        shareText,
+        subject: 'Yélébara - Pressing à domicile',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du partage: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

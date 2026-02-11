@@ -86,9 +86,99 @@ class ClothingSelectionPage extends ConsumerStatefulWidget {
 class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
   Set<PersonType> selectedPersonTypes = <PersonType>{};
   
+  // Stocker les sélections par catégorie pour ne pas les perdre
+  final Map<PersonType, Map<ClothingType, int>> _storedSelections = {};
+  
+  // Obtenir TOUTES les sélections stockées
+  Map<ClothingType, int> _getAllStoredSelections() {
+    final allSelections = <ClothingType, int>{};
+    
+    // Fusionner toutes les sélections stockées
+    for (final storedSelection in _storedSelections.values) {
+      for (final entry in storedSelection.entries) {
+        if (entry.value > 0) {
+          allSelections[entry.key] = (allSelections[entry.key] ?? 0) + entry.value;
+        }
+      }
+    }
+    
+    // Ajouter aussi la sélection actuelle si elle n'est pas encore stockée
+    if (selectedPersonTypes.isNotEmpty) {
+      final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
+      for (final entry in currentSelection.entries) {
+        if (entry.value > 0) {
+          allSelections[entry.key] = (allSelections[entry.key] ?? 0) + entry.value;
+        }
+      }
+    }
+    
+    return allSelections;
+  }
+  
+  // Calculer le total à partir de toutes les sélections
+  CalculationResult _calculateTotalFromAllSelections(Map<ClothingType, int> allSelections) {
+    // Utiliser la méthode de calcul appropriée selon le service
+    if (widget.serviceTitle.toLowerCase().contains('pressing complet')) {
+      return ClothingCalculator.calculateFullPressingPrice(
+        allSelections,
+        pickupAtHome: true, // Livraison obligatoire pour le pressing complet
+      );
+    } else if (widget.serviceTitle.toLowerCase().contains('repassage')) {
+      return ClothingCalculator.calculateIroningPrice(
+        allSelections,
+        pickupAtHome: true, // Livraison obligatoire pour le repassage
+      );
+    } else {
+      return ClothingCalculator.calculatePrice(
+        allSelections,
+        pickupAtHome: widget.pickupAtHome,
+      );
+    }
+  }
+  
+  // Vérifier le poids et afficher une notification si nécessaire
+  void _checkWeightAndShowNotification(double totalWeight) {
+    if (totalWeight < 6000) { // 6kg = 6000g
+      _showWeightNotification();
+    }
+  }
+  
+  // Afficher la notification de poids minimum
+  void _showWeightNotification() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Nous ne nous déplaçons pas pour un poids inférieur à 6KG',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'OK',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
-    final calculationResult = ref.watch(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).calculationResult;
+    // Calculer le total de TOUTES les sélections stockées
+    final allSelections = _getAllStoredSelections();
+    final calculationResult = _calculateTotalFromAllSelections(allSelections);
     
     return Scaffold(
       appBar: AppBar(
@@ -200,14 +290,26 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
-                    selectedPersonTypes.add(personType);
-                  } else {
-                    selectedPersonTypes.remove(personType);
-                    // Supprimer les vêtements de ce type
+                    // STOCKER la sélection actuelle avant de changer
                     final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
-                    final newSelection = Map<ClothingType, int>.from(currentSelection);
-                    newSelection.removeWhere((key, value) => key.personType == personType);
-                    ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).state = newSelection;
+                    if (selectedPersonTypes.isNotEmpty) {
+                      final currentPersonType = selectedPersonTypes.first;
+                      _storedSelections[currentPersonType] = Map.from(currentSelection);
+                    }
+                    
+                    // Changer de catégorie
+                    selectedPersonTypes.clear();
+                    selectedPersonTypes.add(personType);
+                    
+                    // RESTAURER la sélection stockée pour la nouvelle catégorie
+                    final storedSelection = _storedSelections[personType] ?? {};
+                    ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).state = storedSelection;
+                  } else {
+                    // STOCKER la sélection avant de désélectionner
+                    final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
+                    _storedSelections[personType] = Map.from(currentSelection);
+                    
+                    selectedPersonTypes.remove(personType);
                   }
                 });
               },
@@ -222,17 +324,21 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
   }
 
   Widget _buildClothingSelection() {
-    final availableClothingTypes = selectedPersonTypes
-        .expand((personType) => personType.availableClothingTypes)
-        .toSet()
-        .toList();
+    // SYSTÈME DE FILTRAGE STRICT : Une seule catégorie à la fois
+    if (selectedPersonTypes.isEmpty) {
+      return Container(); // Ne rien afficher si aucune catégorie sélectionnée
+    }
+    
+    // Afficher SEULEMENT les vêtements de la catégorie sélectionnée
+    final selectedPersonType = selectedPersonTypes.first; // On prend le premier (et seul) type
+    final availableClothingTypes = selectedPersonType.availableClothingTypes.toList();
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Sélectionnez les vêtements',
-          style: TextStyle(
+        Text(
+          'Vêtements ${selectedPersonType.displayName}',
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -240,7 +346,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
         const SizedBox(height: 12),
         ...availableClothingTypes.map((clothingType) {
           return _buildClothingItem(clothingType);
-        }),
+        }).toList(),
       ],
     );
   }
@@ -507,6 +613,12 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
   }
 
   void _validateOrder(CalculationResult result) {
+    // Vérifier si le poids est inférieur à 6kg
+    if (result.totalWeight < 6000) { // 6kg = 6000g
+      _showWeightNotification();
+      return; // Arrêter la validation
+    }
+    
     // Convertir Map<ClothingType, int> en Map<String, dynamic>
     final clothingSelectionMap = <String, dynamic>{};
     for (final entry in result.selectedClothes.entries) {

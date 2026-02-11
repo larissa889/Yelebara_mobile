@@ -44,6 +44,41 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
   final ImagePicker _imagePicker = ImagePicker();
   final _addressController = TextEditingController();
 
+  // Fonction pour obtenir l'image du service
+  Widget _getServiceImage(String serviceTitle) {
+    switch (serviceTitle.toLowerCase()) {
+      case 'lavage simple':
+        return Image.asset(
+          'assets/images/lavage_simple.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.local_laundry_service, color: Colors.white);
+          },
+        );
+      case 'repassage':
+        return Image.asset(
+          'assets/images/repassage.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.iron_rounded, color: Colors.white);
+          },
+        );
+      case 'pressing complet':
+        return Image.asset(
+          'assets/images/pressing_complet.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.checkroom, color: Colors.white);
+          },
+        );
+      default:
+        return Icon(widget.serviceIcon, color: Colors.white, size: 24);
+    }
+  }
+
   @override
   void dispose() {
     _addressController.dispose();
@@ -220,7 +255,7 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
                   color: widget.serviceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(widget.serviceIcon, color: Colors.white, size: 24),
+                child: _getServiceImage(widget.serviceTitle),
               ),
               const SizedBox(width: 16),
               Expanded(

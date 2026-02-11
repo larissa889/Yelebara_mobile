@@ -16,6 +16,41 @@ class OrderDetailsPage extends StatelessWidget {
     return '$hours:$minutes';
   }
 
+  // Fonction pour obtenir l'image du service
+  Widget _getServiceImage(String serviceTitle) {
+    switch (serviceTitle.toLowerCase()) {
+      case 'lavage simple':
+        return Image.asset(
+          'assets/images/lavage_simple.png',
+          width: 28,
+          height: 28,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.local_laundry_service, color: Colors.white);
+          },
+        );
+      case 'repassage':
+        return Image.asset(
+          'assets/images/repassage.png',
+          width: 28,
+          height: 28,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.iron_rounded, color: Colors.white);
+          },
+        );
+      case 'pressing complet':
+        return Image.asset(
+          'assets/images/pressing_complet.png',
+          width: 28,
+          height: 28,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.checkroom, color: Colors.white);
+          },
+        );
+      default:
+        return Icon(order.serviceIcon, color: order.serviceColor, size: 28);
+    }
+  }
+
   IconData _getStatusIcon() {
     switch (order.status) {
       case OrderStatus.pending:
@@ -154,11 +189,7 @@ class OrderDetailsPage extends StatelessWidget {
                     color: order.serviceColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    order.serviceIcon,
-                    color: order.serviceColor,
-                    size: 28,
-                  ),
+                  child: _getServiceImage(order.serviceTitle),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

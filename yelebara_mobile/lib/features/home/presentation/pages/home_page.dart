@@ -109,7 +109,7 @@ class HomePage extends ConsumerWidget {
               children: [
                 _serviceCard(
                   context,
-                  imagePath: null, // Temporairement null pour utiliser l'icône
+                  imagePath: 'assets/images/lavage_simple.png',
                   title: 'Lavage simple',
                   icon: Icons.local_laundry_service,
                 ),

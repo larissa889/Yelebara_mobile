@@ -33,6 +33,41 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
+  // Fonction pour obtenir l'image du service
+  Widget _getServiceImage(String serviceTitle) {
+    switch (serviceTitle.toLowerCase()) {
+      case 'lavage simple':
+        return Image.asset(
+          'assets/images/lavage_simple.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.local_laundry_service, color: widget.serviceColor);
+          },
+        );
+      case 'repassage':
+        return Image.asset(
+          'assets/images/repassage.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.iron_rounded, color: widget.serviceColor);
+          },
+        );
+      case 'pressing complet':
+        return Image.asset(
+          'assets/images/pressing_complet.png',
+          width: 24,
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Icon(Icons.checkroom, color: widget.serviceColor);
+          },
+        );
+      default:
+        return Icon(widget.serviceIcon, color: widget.serviceColor);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,7 +130,7 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
             color: widget.serviceColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(widget.serviceIcon, color: widget.serviceColor),
+          child: _getServiceImage(widget.serviceTitle),
         ),
         title: Text(
           widget.serviceTitle,

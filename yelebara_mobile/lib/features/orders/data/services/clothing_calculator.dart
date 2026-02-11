@@ -4,7 +4,7 @@ class ClothingCalculator {
   static const int pricePerKg = 500; // FCFA par kg
   static const int priceMultiple = 500; // Multiple pour l'arrondi
   static const int deliveryFee = 1000; // Frais de livraison en FCFA
-  static const int ironingPricePerItem = 50; // FCFA par vêtement pour le repassage
+  static const int ironingPricePerItem = 100; // FCFA par vêtement pour le repassage
   
   /// Calcule le prix total basé sur les vêtements sélectionnés
   static CalculationResult calculatePrice(
@@ -24,11 +24,11 @@ class ClothingCalculator {
       if (quantity > 0) {
         double weight;
         if (useMaxWeight) {
-          weight = clothingType.weightRange.$2; // Poids maximum
+          weight = clothingType.fixedWeight; // Poids fixe
         } else if (useAverageWeight) {
           weight = clothingType.averageWeight; // Poids moyen
         } else {
-          weight = clothingType.weightRange.$1; // Poids minimum
+          weight = clothingType.fixedWeight; // Poids fixe
         }
         
         totalWeight += weight * quantity;

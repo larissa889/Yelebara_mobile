@@ -58,6 +58,7 @@ class PresseurHomePage extends ConsumerStatefulWidget {
 
 class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
   int _currentIndex = 0;
+  String _coveredZones = 'Ouaga 2000, Zone du Bois, Gounghin'; // Valeur par défaut
 
   final List<Widget> _pages = const [
     _PresserOrdersPage(),
@@ -65,6 +66,31 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
     _PresserStatsPage(),
     _PresserProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoveredZones();
+  }
+
+  Future<void> _loadCoveredZones() async {
+    final prefs = await SharedPreferences.getInstance();
+    final zonesJson = prefs.getString('zones') ?? '[{"id": "1", "name": "Ouaga 2000", "status": "active"}, {"id": "2", "name": "Zone du Bois", "status": "active"}, {"id": "3", "name": "Gounghin", "status": "active"}]';
+    try {
+      final List<dynamic> zonesList = json.decode(zonesJson);
+      final activeZones = zonesList.where((zone) => zone["status"] == "active").toList();
+      final zoneNames = activeZones.map((zone) => zone["name"].toString()).toList();
+      
+      if (mounted) {
+        setState(() {
+          _coveredZones = zoneNames.join(', ');
+        });
+      }
+    } catch (e) {
+      // En cas d'erreur, garder la valeur par défaut
+      print('Erreur lors du chargement des zones: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -789,8 +815,40 @@ class _MonthlyStatRow extends StatelessWidget {
 }
 
 // page profil
-class _PresserProfilePage extends StatelessWidget {
+class _PresserProfilePage extends StatefulWidget {
   const _PresserProfilePage({Key? key}) : super(key: key);
+
+  @override
+  State<_PresserProfilePage> createState() => _PresserProfilePageState();
+}
+
+class _PresserProfilePageState extends State<_PresserProfilePage> {
+  String _coveredZones = 'Ouaga 2000, Zone du Bois, Gounghin'; // Valeur par défaut
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCoveredZones();
+  }
+
+  Future<void> _loadCoveredZones() async {
+    final prefs = await SharedPreferences.getInstance();
+    final zonesJson = prefs.getString('zones') ?? '[{"id": "1", "name": "Ouaga 2000", "status": "active"}, {"id": "2", "name": "Zone du Bois", "status": "active"}, {"id": "3", "name": "Gounghin", "status": "active"}]';
+    try {
+      final List<dynamic> zonesList = json.decode(zonesJson);
+      final activeZones = zonesList.where((zone) => zone["status"] == "active").toList();
+      final zoneNames = activeZones.map((zone) => zone["name"].toString()).toList();
+      
+      if (mounted) {
+        setState(() {
+          _coveredZones = zoneNames.join(', ');
+        });
+      }
+    } catch (e) {
+      // En cas d'erreur, garder la valeur par défaut
+      print('Erreur lors du chargement des zones: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -849,7 +907,7 @@ class _PresserProfilePage extends StatelessWidget {
           _ProfileInfoCard(
             icon: Icons.location_on,
             title: 'Zone couverte',
-            value: 'Ouaga 2000, Zone du Bois, Gounghin',
+            value: _coveredZones.isNotEmpty ? _coveredZones : 'Non définie',
           ),
           const SizedBox(height: 12),
           _ProfileInfoCard(

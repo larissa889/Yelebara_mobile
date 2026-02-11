@@ -31,6 +31,8 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       routerConfig: goRouter,
       debugShowCheckedModeBanner: false,
+      // Remplacer le logo Flutter par le logo Yélébara
+      debugShowMaterialGrid: false,
     );
   }
 }

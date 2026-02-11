@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
 
@@ -232,44 +233,210 @@ class _AdminValidationsPage extends StatelessWidget {
 }
 
 // 🧩 Onglet 4 : Zones
-class _AdminZonesPage extends StatelessWidget {
+class _AdminZonesPage extends StatefulWidget {
   const _AdminZonesPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text("Zones couvertes"),
-            ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add),
-              label: const Text("Nouvelle zone"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
-              ),
-            ),
-          ],
+  State<_AdminZonesPage> createState() => _AdminZonesPageState();
+}
+
+class _AdminZonesPageState extends State<_AdminZonesPage> {
+  List<Map<String, dynamic>> zones = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadZones();
+  }
+
+  Future<void> _loadZones() async {
+    final prefs = await SharedPreferences.getInstance();
+    final zonesJson = prefs.getString('zones') ?? '[{"id": "1", "name": "Ouaga 2000", "status": "active"}, {"id": "2", "name": "Zone du Bois", "status": "active"}, {"id": "3", "name": "Gounghin", "status": "active"}]';
+    try {
+      final List<dynamic> zonesList = json.decode(zonesJson);
+      setState(() {
+        zones = zonesList.cast<Map<String, dynamic>>();
+      });
+    } catch (e) {
+      // En cas d'erreur, utiliser les zones par défaut
+      setState(() {
+        zones = [
+          {"id": "1", "name": "Ouaga 2000", "status": "active"},
+          {"id": "2", "name": "Zone du Bois", "status": "active"},
+          {"id": "3", "name": "Gounghin", "status": "active"}
+        ];
+      });
+    }
+  }
+
+  Future<void> _saveZones() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('zones', json.encode(zones));
+  }
+
+  Future<void> _addZone() async {
+    final TextEditingController nameController = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nouvelle zone'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Nom de la zone',
+            border: OutlineInputBorder(),
+          ),
         ),
-        const SizedBox(height: 12),
-        ...List.generate(
-          4,
-          (i) => Card(
-            child: ListTile(
-              title: Text('Zone ${i + 1}'),
-              subtitle: const Text('Statut : Active'),
-              trailing: Switch(
-                value: true,
-                onChanged: (v) {},
-                activeColor: Colors.orange.shade700,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, nameController.text.trim()),
+            child: const Text('Ajouter', style: TextStyle(color: Colors.orange)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      setState(() {
+        zones.add({
+          "id": (zones.length + 1).toString(),
+          "name": result,
+          "status": "active"
+        });
+      });
+      await _saveZones();
+    }
+  }
+
+  Future<void> _toggleZoneStatus(int index) async {
+    setState(() {
+      zones[index]["status"] = zones[index]["status"] == "active" ? "inactive" : "active";
+    });
+    await _saveZones();
+  }
+
+  Future<void> _deleteZone(int index) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la zone'),
+        content: Text('Voulez-vous vraiment supprimer la zone "${zones[index]["name"]}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() {
+        zones.removeAt(index);
+      });
+      await _saveZones();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Gestion des zones'),
+        backgroundColor: Colors.orange.shade700,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          // Bouton pour ajouter une zone
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _addZone,
+                icon: const Icon(Icons.add),
+                label: const Text('Nouvelle zone'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          // Liste des zones
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: zones.length,
+              itemBuilder: (context, index) {
+                final zone = zones[index];
+                final isActive = zone["status"] == "active";
+                
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isActive ? Colors.green : Colors.grey,
+                      child: Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      zone["name"],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isActive ? Colors.black87 : Colors.grey.shade600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Statut: ${isActive ? "Active" : "Inactive"}',
+                      style: TextStyle(
+                        color: isActive ? Colors.green.shade700 : Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Bouton pour activer/désactiver
+                        IconButton(
+                          icon: Icon(
+                            isActive ? Icons.toggle_on : Icons.toggle_off,
+                            color: isActive ? Colors.green : Colors.grey,
+                          ),
+                          onPressed: () => _toggleZoneStatus(index),
+                          tooltip: isActive ? 'Désactiver' : 'Activer',
+                        ),
+                        const SizedBox(width: 8),
+                        // Bouton pour supprimer
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _deleteZone(index),
+                          tooltip: 'Supprimer',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
