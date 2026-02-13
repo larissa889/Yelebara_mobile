@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 enum OrderStatus {
   pending,      // En attente de paiement
   paid,         // Payée
+  assigned,     // Assignée à un presseur
   processing,   // En cours de traitement
   completed,    // Terminée
   cancelled     // Annulée
@@ -45,7 +46,16 @@ class OrderEntity {
     this.paymentMethod,
     this.transactionId,
     required this.createdAt,
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.weight,
+    this.items,
   });
+
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? weight;
+  final List<Map<String, dynamic>>? items;
 
   OrderEntity copyWith({
     String? id,
@@ -62,6 +72,10 @@ class OrderEntity {
     PaymentMethod? paymentMethod,
     String? transactionId,
     DateTime? createdAt,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    double? weight,
+    List<Map<String, dynamic>>? items,
   }) {
     return OrderEntity(
       id: id ?? this.id,
@@ -78,6 +92,10 @@ class OrderEntity {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       transactionId: transactionId ?? this.transactionId,
       createdAt: createdAt ?? this.createdAt,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+      weight: weight ?? this.weight,
+      items: items ?? this.items,
     );
   }
 }

@@ -12,7 +12,7 @@ class HomePage extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: const Color(0xFFF8F9FA), // Off-white background
       drawer: const HomeDrawer(),
 
       /// APPBAR ORANGE
@@ -45,14 +45,23 @@ class HomePage extends ConsumerWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
+                decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    colorScheme.primary,
-                    colorScheme.primary.withOpacity(0.85),
+                     Color(0xFFF97316), // Orange 500
+                     Color(0xFFEA580C), // Orange 600
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,13 +79,14 @@ class HomePage extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.white.withOpacity(0.2), // Glass effect
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
-                    child: Text(
+                    child: const Text(
                       'Votre pressing mobile',
                       style: TextStyle(
-                        color: colorScheme.primary,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -91,8 +101,9 @@ class HomePage extends ConsumerWidget {
             const Text(
               'Nos services',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF111827), // Darker text
               ),
             ),
 
@@ -149,7 +160,19 @@ class HomePage extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24), // Super rounded
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,16 +182,19 @@ class HomePage extends ConsumerWidget {
             height: 48,
             decoration: BoxDecoration(
               color: colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16), // Slightly more rounded icon bg
             ),
             child: imagePath != null 
-              ? Image.asset(
-                  imagePath,
-                  width: 28,
-                  height: 28,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.image, color: colorScheme.primary);
-                  },
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    imagePath,
+                    width: 28,
+                    height: 28,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.image, color: colorScheme.primary);
+                    },
+                  ),
                 )
               : Icon(
                   icon,
@@ -181,6 +207,7 @@ class HomePage extends ConsumerWidget {
             title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
           const Spacer(),
@@ -199,17 +226,15 @@ class HomePage extends ConsumerWidget {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const StadiumBorder(), // Pill shape
+                elevation: 0,
               ),
-              child: FittedBox(
-                child: Text(
-                  'Commander', 
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+              child: const Text(
+                'Commander', 
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),

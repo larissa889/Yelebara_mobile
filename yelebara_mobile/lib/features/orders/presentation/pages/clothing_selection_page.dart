@@ -5,6 +5,7 @@ import '../../data/services/clothing_calculator.dart';
 import 'dart:io';
 import 'location_selection_page.dart';
 import 'payment_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/widgets/order_step_footer.dart';
 
 class ClothingSelectionProvider extends StateNotifier<Map<ClothingType, int>> {
   ClothingSelectionProvider({required this.pickupAtHome, required this.serviceType}) : super({});
@@ -77,7 +78,12 @@ class ClothingSelectionPage extends ConsumerStatefulWidget {
     this.deliveryAddress,
     this.housePhoto,
     this.useCurrentLocation = false,
+    this.latitude,
+    this.longitude,
   }) : super(key: key);
+
+  final double? latitude;
+  final double? longitude;
 
   @override
   ConsumerState<ClothingSelectionPage> createState() => _ClothingSelectionPageState();
@@ -181,37 +187,41 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
     final calculationResult = _calculateTotalFromAllSelections(allSelections);
     
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: Text('Détails du lavage'),
-        backgroundColor: widget.serviceColor,
-        foregroundColor: Colors.white,
+        title: const Text('Détails du lavage', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: Column(
-        children: [
-          // Header avec informations du service
-          _buildServiceHeader(),
-          
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Sélection des types de personne
-                _buildPersonTypeSelection(),
-                
-                const SizedBox(height: 24),
-                
-                // Sélection des vêtements
-                if (selectedPersonTypes.isNotEmpty) ...[
-                  _buildClothingSelection(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header avec informations du service
+            _buildServiceHeader(),
+            
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Sélection des types de personne
+                  _buildPersonTypeSelection(),
+                  
                   const SizedBox(height: 24),
+                  
+                  // Sélection des vêtements
+                  if (selectedPersonTypes.isNotEmpty) ...[
+                    _buildClothingSelection(),
+                    const SizedBox(height: 100), // Space for footer
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          
-          // Footer avec résumé et bouton
-          _buildBottomSummary(calculationResult),
-        ],
+            
+            // Footer avec résumé et bouton
+            _buildBottomSummary(calculationResult),
+          ],
+        ),
       ),
     );
   }
@@ -220,10 +230,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: widget.serviceColor.withOpacity(0.1),
-        border: Border(bottom: BorderSide(color: widget.serviceColor.withOpacity(0.3))),
-      ),
+      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -232,10 +239,10 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.serviceColor,
-                  borderRadius: BorderRadius.circular(12),
+                  color: widget.serviceColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(widget.serviceIcon, color: Colors.white, size: 24),
+                child: Icon(widget.serviceIcon, color: widget.serviceColor, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -251,7 +258,7 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year} à ${widget.selectedTime.hour}:${widget.selectedTime.minute.toString().padLeft(2, '0')}',
+                      '${widget.selectedDate.day}/${widget.selectedDate.month}/${widget.selectedDate.year} · ${widget.selectedTime.format(context)}',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,
@@ -285,37 +292,43 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           children: PersonType.values.map((personType) {
             final isSelected = selectedPersonTypes.contains(personType);
             return FilterChip(
-              label: Text(personType.displayName),
+              label: Text(
+                personType.displayName,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
               selected: isSelected,
               onSelected: (selected) {
+                // ... same logic
                 setState(() {
                   if (selected) {
-                    // STOCKER la sélection actuelle avant de changer
                     final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
                     if (selectedPersonTypes.isNotEmpty) {
                       final currentPersonType = selectedPersonTypes.first;
                       _storedSelections[currentPersonType] = Map.from(currentSelection);
                     }
-                    
-                    // Changer de catégorie
                     selectedPersonTypes.clear();
                     selectedPersonTypes.add(personType);
-                    
-                    // RESTAURER la sélection stockée pour la nouvelle catégorie
                     final storedSelection = _storedSelections[personType] ?? {};
                     ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).state = storedSelection;
                   } else {
-                    // STOCKER la sélection avant de désélectionner
                     final currentSelection = ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
                     _storedSelections[personType] = Map.from(currentSelection);
-                    
                     selectedPersonTypes.remove(personType);
                   }
                 });
               },
-              backgroundColor: Colors.grey.shade200,
-              selectedColor: widget.serviceColor.withOpacity(0.2),
-              checkmarkColor: widget.serviceColor,
+              backgroundColor: Colors.white,
+              selectedColor: widget.serviceColor,
+              checkmarkColor: Colors.white,
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: isSelected ? widget.serviceColor : Colors.grey.shade300,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             );
           }).toList(),
         ),
@@ -355,78 +368,103 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
     final currentSelection = ref.watch(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)));
     final quantity = currentSelection[clothingType] ?? 0;
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Checkbox
-            Checkbox(
-              value: quantity > 0,
-              onChanged: (value) {
-                if (value == true) {
-                  ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 1);
-                } else {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Checkbox (Custom)
+          InkWell(
+            onTap: () {
+               if (quantity > 0) {
                   ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 0);
-                }
-              },
-              activeColor: widget.serviceColor,
+               } else {
+                  ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 1);
+               }
+            },
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: quantity > 0 ? widget.serviceColor : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: quantity > 0 ? widget.serviceColor : Colors.grey.shade400,
+                ),
+              ),
+              child: quantity > 0
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
             ),
-            
-            // Nom du vêtement
-            Expanded(
-              child: Text(
-                clothingType.displayName,
-                style: const TextStyle(fontSize: 16),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Nom du vêtement
+          Expanded(
+            child: Text(
+              clothingType.displayName,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: quantity > 0 ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
-            
-            // Sélecteur de quantité
-            if (quantity > 0) ...[
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: widget.serviceColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove, size: 20),
-                      onPressed: () {
-                        if (quantity > 1) {
-                          ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity - 1);
-                        } else {
-                          ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 0);
-                        }
-                      },
-                      color: widget.serviceColor,
-                    ),
-                    Container(
-                      width: 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        quantity.toString(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: widget.serviceColor,
-                        ),
+          ),
+          
+          // Sélecteur de quantité
+          if (quantity > 0) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: widget.serviceColor.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove, size: 20, color: widget.serviceColor),
+                    onPressed: () {
+                      if (quantity > 1) {
+                        ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity - 1);
+                      } else {
+                        ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, 0);
+                      }
+                    },
+                  ),
+                  Container(
+                    width: 30,
+                    alignment: Alignment.center,
+                    child: Text(
+                      quantity.toString(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: widget.serviceColor,
+                        fontSize: 16,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.add, size: 20),
-                      onPressed: () {
-                        ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity + 1);
-                      },
-                      color: widget.serviceColor,
-                    ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add, size: 20, color: widget.serviceColor),
+                    onPressed: () {
+                      ref.read(clothingSelectionProvider((pickupAtHome: widget.pickupAtHome, serviceType: widget.serviceTitle)).notifier).toggleClothing(clothingType, quantity + 1);
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -578,34 +616,20 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           
           const SizedBox(height: 16),
           
-          // Bouton de validation
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: result.totalItems > 0 ? () => _validateOrder(result) : () {
-                ScaffoldMessenger.of(context).showSnackBar(
+          // Bouton de validation (Replaced by OrderStepFooter)
+          OrderStepFooter(
+            currentStep: 3,
+            totalSteps: 3,
+            onPressed: result.totalItems > 0 ? () => _validateOrder(result) : () {
+               ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Veuillez sélectionner au moins un vêtement'),
                     backgroundColor: Colors.red,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.serviceColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Valider le lavage',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+               );
+            },
+            buttonText: 'Valider le lavage',
+            isEnabled: result.totalItems > 0,
           ),
         ],
       ),
@@ -643,6 +667,8 @@ class _ClothingSelectionPageState extends ConsumerState<ClothingSelectionPage> {
           deliveryAddress: widget.deliveryAddress ?? "Adresse actuelle (tanghin, Ouagadougou)",
           housePhoto: widget.housePhoto,
           useCurrentLocation: widget.useCurrentLocation ?? true,
+          latitude: widget.latitude,
+          longitude: widget.longitude,
         ),
       ),
     );

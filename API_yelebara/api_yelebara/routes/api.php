@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index']);
     Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store']);
     Route::get('/orders/{id}', [App\Http\Controllers\OrderController::class, 'show']);
+    Route::put('/orders/{id}', [App\Http\Controllers\OrderController::class, 'update']);
 
     // Routes admin
     Route::middleware('role:admin')->prefix('admin')->group(function () {
@@ -29,5 +30,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/presseurs/pending', [AdminController::class, 'pendingPresseurs']);
         Route::post('/presseurs/{id}/validate', [AdminController::class, 'validatePresseur']);
         Route::post('/presseurs/{id}/reject', [AdminController::class, 'rejectPresseur']);
+    });
+
+    // Routes presseur
+    Route::middleware('role:presseur')->prefix('presseur')->group(function () {
+        Route::post('/location', [App\Http\Controllers\PresseurController::class, 'updateLocation']);
+        Route::post('/status', [App\Http\Controllers\PresseurController::class, 'updateStatus']);
+        Route::get('/current-order', [App\Http\Controllers\PresseurController::class, 'currentOrder']);
+        Route::post('/orders/{id}/accept', [App\Http\Controllers\PresseurController::class, 'acceptOrder']);
+        Route::post('/orders/{id}/complete', [App\Http\Controllers\PresseurController::class, 'completeOrder']);
     });
 });

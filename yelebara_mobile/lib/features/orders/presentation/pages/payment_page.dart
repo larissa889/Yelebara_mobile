@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
+import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart' as entity;
+import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
+import 'package:yelebara_mobile/features/orders/data/models/clothing_model.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final String serviceTitle;
@@ -35,7 +38,12 @@ class PaymentPage extends ConsumerStatefulWidget {
     required this.deliveryAddress,
     this.housePhoto,
     required this.useCurrentLocation,
+    this.latitude,
+    this.longitude,
   }) : super(key: key);
+
+  final double? latitude;
+  final double? longitude;
 
   @override
   ConsumerState<PaymentPage> createState() => _PaymentPageState();
@@ -100,14 +108,64 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     super.dispose();
   }
 
+  List<Map<String, dynamic>> _buildItemsList() {
+    final items = <Map<String, dynamic>>[];
+    
+    widget.clothingSelection.forEach((name, qty) {
+      if (qty is int && qty > 0) {
+         double weight = 0.5; // Fallback
+         
+         // Find ClothingType by display name
+         try {
+           final type = ClothingType.values.firstWhere(
+             (t) => t.displayName == name, 
+             orElse: () => ClothingType.haut // Fallback
+           );
+           
+           // Use averageWeight from model if found, verify if displayName matches
+           if (type.displayName == name) {
+              weight = type.averageWeight / 1000.0; // Convert g to kg
+           }
+         } catch (e) {
+           print("Error finding clothing type for $name: $e");
+         }
+
+         items.add({
+           'name': name,
+           'quantity': qty,
+           'weight': weight, 
+         });
+      }
+    });
+    return items;
+  }
+
   void _processPayment() async {
     setState(() {
       _isProcessing = true;
     });
 
     try {
-      // Simuler le traitement du paiement
-      await Future.delayed(const Duration(seconds: 3));
+      final order = entity.OrderEntity(
+        id: '', // Backend will generate ID
+        serviceTitle: widget.serviceTitle,
+        servicePrice: widget.formattedPrice.replaceAll(RegExp(r'[^0-9]'), ''), // Just numbers
+        amount: widget.finalPrice.toDouble(),
+        date: widget.selectedDate,
+        time: widget.selectedTime,
+        pickupAtHome: widget.pickupAtHome,
+        instructions: widget.instructions,
+        serviceIcon: widget.serviceIcon,
+        serviceColor: widget.serviceColor,
+        status: entity.OrderStatus.pending,
+        paymentMethod: _selectedMethod == PaymentMethod.cash ? entity.PaymentMethod.cash : entity.PaymentMethod.mobileTransfer,
+        createdAt: DateTime.now(),
+        pickupLatitude: widget.latitude,
+        pickupLongitude: widget.longitude,
+        items: _buildItemsList(),
+      );
+
+      await ref.read(orderProvider.notifier).addOrder(order);
 
       if (!mounted) return;
 
@@ -119,13 +177,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       _showPaymentSuccessDialog();
 
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isProcessing = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur lors du paiement: $e'),
+          content: Text('Erreur lors de la commande: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -215,7 +274,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             _buildPaymentMethods(),
             const SizedBox(height: 32),
             // _buildPaymentForm(), // Formulaire de paiement supprimé
-            // _buildPayButton(), // Bouton Payer supprimé
+            const SizedBox(height: 24),
+            _buildPayButton(), 
           ],
         ),
       ),
@@ -371,21 +431,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           _selectedMethod = method;
         });
         
-        // Naviguer vers la page de paiement dédiée
-        switch (method) {
-          case PaymentMethod.orangeMoney:
-            context.push('/payment/orange-money');
-            break;
-          case PaymentMethod.moovMoney:
-            context.push('/payment/moov-money');
-            break;
-          case PaymentMethod.wave:
-            context.push('/payment/wave');
-            break;
-          case PaymentMethod.cash:
-            // Ne rien faire pour l'espèce (si activé)
-            break;
-        }
+        // Simple sélection, pas de navigation
+        setState(() {
+          _selectedMethod = method;
+        });
       },
       child: Container(
         width: method == PaymentMethod.cash ? double.infinity : 120,
@@ -655,7 +704,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ],
               )
             : const Text(
-                'Payer maintenant',
+                'Valider la commande',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

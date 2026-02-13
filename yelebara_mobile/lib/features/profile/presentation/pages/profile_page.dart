@@ -401,29 +401,23 @@ class _ClientProfilePageState extends ConsumerState<ClientProfilePage> {
   }
 
   Future<void> _logout() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: const Text('Voulez-vous vraiment vous déconnecter ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+    try {
+      // Perform logout
+      await ref.read(authProvider.notifier).logout();
+      // Navigate to login
+      if (mounted) {
+        context.go('/login');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la déconnexion: $e'),
+            backgroundColor: Colors.red,
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(authProvider.notifier).logout();
-              if (mounted) {
-                context.go('/login');
-              }
-            },
-            child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   Future<void> _confirmDeleteAccount() async {

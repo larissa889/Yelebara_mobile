@@ -22,8 +22,8 @@ class _ClientBottomNavState extends ConsumerState<ClientBottomNav> {
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       currentIndex: widget.activeIndex,
-      selectedItemColor: Theme.of(context).colorScheme.primary,
-      unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+      selectedItemColor: const Color(0xFFF97316), // Orange
+      unselectedItemColor: const Color(0xFF9CA3AF), // Soft Gray
       onTap: (index) {
         if (index == widget.activeIndex) return;
         switch (index) {

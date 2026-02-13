@@ -8,6 +8,8 @@ extension OrderStatusExtension on OrderEntity {
         return 'En attente de paiement';
       case OrderStatus.paid:
         return 'Payée';
+      case OrderStatus.assigned:
+        return 'Attribuée';
       case OrderStatus.processing:
         return 'En cours';
       case OrderStatus.completed:
@@ -23,6 +25,8 @@ extension OrderStatusExtension on OrderEntity {
         return Colors.orange;
       case OrderStatus.paid:
         return Colors.blue;
+      case OrderStatus.assigned:
+        return Colors.indigo;
       case OrderStatus.processing:
         return Colors.purple;
       case OrderStatus.completed:

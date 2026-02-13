@@ -17,6 +17,10 @@ class OrderModel extends OrderEntity {
     PaymentMethod? paymentMethod,
     String? transactionId,
     required DateTime createdAt,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    double? weight,
+    List<Map<String, dynamic>>? items,
   }) : super(
           id: id,
           serviceTitle: serviceTitle,
@@ -32,7 +36,13 @@ class OrderModel extends OrderEntity {
           paymentMethod: paymentMethod,
           transactionId: transactionId,
           createdAt: createdAt,
+          pickupLatitude: pickupLatitude,
+          pickupLongitude: pickupLongitude,
+          items: items,
+          weight: weight,
         );
+
+
 
   factory OrderModel.fromEntity(OrderEntity entity) {
     return OrderModel(
@@ -50,53 +60,79 @@ class OrderModel extends OrderEntity {
       paymentMethod: entity.paymentMethod,
       transactionId: entity.transactionId,
       createdAt: entity.createdAt,
+      pickupLatitude: entity.pickupLatitude,
+      pickupLongitude: entity.pickupLongitude,
+      weight: entity.weight,
+      items: entity.items,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'serviceTitle': serviceTitle,
-      'servicePrice': servicePrice,
+      'service_title': serviceTitle,
+      'service_price': servicePrice,
       'amount': amount,
       'date': date.toIso8601String(),
       'time': '${time.hour}:${time.minute}',
-      'pickupAtHome': pickupAtHome,
+      'pickup_at_home': pickupAtHome,
       'instructions': instructions,
-      'serviceIcon': serviceIcon.codePoint,
-      'serviceColor': serviceColor.value,
+      'service_icon_code': serviceIcon.codePoint,
+      'service_color_code': serviceColor.value,
       'status': status.index,
       'paymentMethod': paymentMethod?.index,
       'transactionId': transactionId,
-      'createdAt': createdAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'pickup_latitude': pickupLatitude,
+      'pickup_longitude': pickupLongitude,
+      'weight': weight,
+      'items': items,
     };
   }
 
   factory OrderModel.fromMap(Map<String, dynamic> map) {
     return OrderModel(
-      id: map['id'],
-      serviceTitle: map['serviceTitle'],
-      servicePrice: map['servicePrice'],
+      id: map['id'].toString(),
+      serviceTitle: map['service_title'] ?? map['serviceTitle'] ?? '',
+      servicePrice: map['service_price'] ?? map['servicePrice'] ?? '',
       amount: map['amount'] != null
           ? double.tryParse(map['amount'].toString()) ?? 0.0
           : 0.0,
-      date: DateTime.parse(map['date']),
-      time: TimeOfDay(
-        hour: int.parse(map['time'].toString().split(':')[0]),
-        minute: int.parse(map['time'].toString().split(':')[1]),
-      ),
-      pickupAtHome: map['pickupAtHome'] ?? false,
+      date: map['date'] != null ? DateTime.parse(map['date']) : DateTime.now(),
+      time: map['time'] != null && map['time'].toString().contains(':')
+          ? TimeOfDay(
+              hour: int.parse(map['time'].toString().split(':')[0]),
+              minute: int.parse(map['time'].toString().split(':')[1]),
+            )
+          : const TimeOfDay(hour: 0, minute: 0),
+      pickupAtHome: map['pickup_at_home'] == 1 || map['pickup_at_home'] == true,
       instructions: map['instructions'] ?? '',
-      serviceIcon: IconData(map['serviceIcon'], fontFamily: 'MaterialIcons'),
-      serviceColor: Color(map['serviceColor']),
+      serviceIcon: IconData(
+          map['service_icon_code'] ?? map['serviceIcon'] ?? 58264,
+          fontFamily: 'MaterialIcons'),
+      serviceColor: Color(
+          map['service_color_code'] ?? map['serviceColor'] ?? 0xFF000000),
       status: OrderStatus.values[(map['status'] ?? 0) as int],
       paymentMethod: map['paymentMethod'] != null
           ? PaymentMethod.values[(map['paymentMethod']) as int]
           : null,
       transactionId: map['transactionId'],
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
           : DateTime.now(),
+      pickupLatitude: map['pickup_latitude'] != null
+          ? double.tryParse(map['pickup_latitude'].toString())
+          : null,
+      pickupLongitude: map['pickup_longitude'] != null
+          ? double.tryParse(map['pickup_longitude'].toString())
+          : null,
+      weight: map['weight'] != null
+          ? double.tryParse(map['weight'].toString())
+          : null,
+      items: map['items'] != null
+          ? List<Map<String, dynamic>>.from(
+              (map['items'] as List).map((e) => Map<String, dynamic>.from(e)))
+          : null,
     );
   }
   
@@ -116,6 +152,10 @@ class OrderModel extends OrderEntity {
     PaymentMethod? paymentMethod,
     String? transactionId,
     DateTime? createdAt,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    double? weight,
+    List<Map<String, dynamic>>? items,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -132,6 +172,10 @@ class OrderModel extends OrderEntity {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       transactionId: transactionId ?? this.transactionId,
       createdAt: createdAt ?? this.createdAt,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+      weight: weight ?? this.weight,
+      items: items ?? this.items,
     );
   }
 
@@ -155,6 +199,10 @@ class OrderModel extends OrderEntity {
       paymentMethod: paymentMethod,
       transactionId: transactionId,
       createdAt: createdAt,
+      pickupLatitude: pickupLatitude,
+      pickupLongitude: pickupLongitude,
+      weight: weight,
+      items: items,
     );
   }
 }

@@ -21,10 +21,10 @@ class AuthController extends Controller
             'email' => 'nullable|email|unique:users,email',
             'password' => 'required|string|min:6',
             'role' => 'required|in:client,presseur',
-            'address1' => 'required_if:role,client|string|nullable',
-            'address2' => 'nullable|string',
             'phone2' => 'nullable|string',
             'zone' => 'required_if:role,presseur|string|nullable',
+            'city' => 'required|string',
+            'quartier' => 'required|string',
         ]);
 
         $user = User::create([
@@ -34,10 +34,10 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'status' => $validated['role'] === 'presseur' ? 'pending' : 'active',
-            'address1' => $validated['address1'] ?? null,
-            'address2' => $validated['address2'] ?? null,
             'phone2' => $validated['phone2'] ?? null,
             'zone' => $validated['zone'] ?? null,
+            'city' => $validated['city'],
+            'quartier' => $validated['quartier'],
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -135,9 +135,9 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:users,email,' . $user->id,
-            'address1' => 'nullable|string',
-            'address2' => 'nullable|string',
             'phone2' => 'nullable|string',
+            'city' => 'nullable|string',
+            'quartier' => 'nullable|string',
             // 'photo' => 'nullable|image', // Si envoi fichier
             // Pour l'instant on accepte juste update texte ou URL si géré autrement
         ]);

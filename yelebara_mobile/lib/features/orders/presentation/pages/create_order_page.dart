@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
 import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
+import 'package:yelebara_mobile/features/orders/presentation/widgets/order_step_footer.dart';
 import 'location_selection_page.dart';
 
 class CreateOrderPage extends ConsumerStatefulWidget {
@@ -89,101 +90,213 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: Text(widget.existingOrder == null 
           ? 'Nouvelle commande' 
-          : 'Modifier la commande'
+          : 'Modifier la commande',
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: widget.serviceColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildServiceCard(),
-              const SizedBox(height: 20),
-              _buildPickupSwitch(),
-              const SizedBox(height: 16),
-              _buildDateTimePickers(),
-              const SizedBox(height: 16),
-              _buildInstructionsField(),
-              const SizedBox(height: 24),
-              _buildSubmitButton(),
-              const SizedBox(height: 40), // Extra padding for bottom safe area/OS gestures
-            ],
-          ),
+        child: Column(
+          children: [
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildServiceCard(),
+                    const SizedBox(height: 20),
+                    _buildPickupSwitch(),
+                    const SizedBox(height: 16),
+                    _buildDateTimePickers(),
+                    const SizedBox(height: 16),
+                    _buildInstructionsField(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+            OrderStepFooter(
+              currentStep: 1,
+              totalSteps: 3,
+              onPressed: _validateAndProceed,
+              buttonText: 'Continuer',
+              isEnabled: true,
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildServiceCard() {
-    return Card(
-      elevation: 2,
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: widget.serviceColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: _getServiceImage(widget.serviceTitle),
-        ),
-        title: Text(
-          widget.serviceTitle,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(widget.servicePrice ?? 'Prix sur demande'),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: widget.serviceColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: _getServiceImage(widget.serviceTitle),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.serviceTitle,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.servicePrice ?? 'Prix sur demande',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildPickupSwitch() {
-    return Card(
-      elevation: 1,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: SwitchListTile(
-        title: const Text('Ramassage à domicile'),
-        subtitle: const Text('Un livreur viendra chercher votre linge'),
+        title: const Text('Ramassage à domicile', style: TextStyle(fontWeight: FontWeight.w600),),
+        subtitle: const Text('Un livreur viendra chercher votre linge', style: TextStyle(fontSize: 13),),
         value: _pickupAtHome,
         onChanged: (value) => setState(() => _pickupAtHome = value),
-        secondary: const Icon(Icons.home),
+        secondary: Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(10)
+            ),
+            child: Icon(Icons.home, color: widget.serviceColor)
+        ),
+        activeColor: widget.serviceColor,
       ),
     );
   }
 
   Widget _buildDateTimePickers() {
-    return Column(
+    return Row(
       children: [
-        Card(
-          elevation: 1,
-          child: ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: const Text('Date'),
-            subtitle: Text(
-              _selectedDate == null
-                  ? 'Sélectionner une date'
-                  : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        Expanded(
+          child: GestureDetector(
             onTap: _selectDate,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Date', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _selectedDate == null
+                            ? 'Choisir'
+                            : DateFormat('dd/MM').format(_selectedDate!),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Card(
-          elevation: 1,
-          child: ListTile(
-            leading: const Icon(Icons.access_time),
-            title: const Text('Heure'),
-            subtitle: Text(
-              _selectedTime == null
-                  ? 'Sélectionner une heure'
-                  : _selectedTime!.format(context),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
             onTap: _selectTime,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Heure', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _selectedTime == null
+                            ? 'Choisir'
+                            : _selectedTime!.format(context),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -196,35 +309,28 @@ class _CreateOrderPageState extends ConsumerState<CreateOrderPage> {
       decoration: InputDecoration(
         labelText: 'Instructions particulières',
         hintText: 'Ex: Taches difficiles, repassage soigné...',
-        prefixIcon: const Icon(Icons.note),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        prefixIcon: const Icon(Icons.note_alt_outlined),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: widget.serviceColor),
+        ),
       ),
       maxLines: 4,
     );
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _validateAndProceed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: widget.serviceColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          widget.existingOrder == null ? 'Continuer' : 'Modifier la commande',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+    return Container(); // Removed, moved to footer
   }
 
   Future<void> _selectDate() async {

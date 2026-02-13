@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import 'clothing_selection_page.dart';
 import 'payment_page.dart';
+import 'package:yelebara_mobile/features/orders/presentation/widgets/order_step_footer.dart';
 
 class LocationSelectionPage extends ConsumerStatefulWidget {
   final String serviceTitle;
@@ -43,6 +46,71 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
   File? _housePhoto;
   final ImagePicker _imagePicker = ImagePicker();
   final _addressController = TextEditingController();
+  Position? _currentPosition;
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+    
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      
+      String address = "Position actuelle";
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          address = "${place.street}, ${place.subLocality}, ${place.locality}";
+          // Clean up address
+          address = address.replaceAll(RegExp(r'^, | , '), '');
+        }
+      } catch (e) {
+        debugPrint("Error reverse geocoding: $e");
+      }
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+          if (_useCurrentLocation) {
+             _newAddress = address;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
+    }
+  }
 
   // Fonction pour obtenir l'image du service
   Widget _getServiceImage(String serviceTitle) {
@@ -177,7 +245,7 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
     }
 
     final address = _useCurrentLocation 
-        ? "Adresse actuelle (tanghin, Ouagadougou)" 
+        ? (_newAddress ?? "Position actuelle (GPS)") 
         : _addressController.text.trim();
 
     // Navigation vers la page de sélection de vêtements
@@ -194,6 +262,8 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
           deliveryAddress: address,
           housePhoto: _housePhoto,
           useCurrentLocation: _useCurrentLocation,
+          latitude: _useCurrentLocation && _currentPosition != null ? _currentPosition!.latitude : null,
+          longitude: _useCurrentLocation && _currentPosition != null ? _currentPosition!.longitude : null,
         ),
       ),
     );
@@ -202,33 +272,49 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Localisation de livraison'),
-        backgroundColor: widget.serviceColor,
-        foregroundColor: Colors.white,
+        title: const Text('Localisation de livraison', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header avec résumé
-            _buildOrderSummary(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header avec résumé
+                    _buildOrderSummary(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Choix de la localisation
+                    _buildLocationChoice(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Photo de la maison
+                    _buildHousePhotoSection(),
+                    
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
             
-            const SizedBox(height: 24),
-            
-            // Choix de la localisation
-            _buildLocationChoice(),
-            
-            const SizedBox(height: 24),
-            
-            // Photo de la maison
-            _buildHousePhotoSection(),
-            
-            const SizedBox(height: 32),
-            
-            // Bouton de validation
-            _buildValidateButton(),
+            // Bouton de validation (via Footer)
+            OrderStepFooter(
+              currentStep: 2,
+              totalSteps: 3,
+              onPressed: _validateOrder,
+              buttonText: 'Valider la localisation',
+              isEnabled: true,
+            ),
           ],
         ),
       ),
@@ -240,9 +326,15 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: widget.serviceColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.serviceColor.withOpacity(0.3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,8 +344,8 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.serviceColor,
-                  borderRadius: BorderRadius.circular(12),
+                  color: widget.serviceColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: _getServiceImage(widget.serviceTitle),
               ),
@@ -321,46 +413,92 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
         ),
         const SizedBox(height: 16),
         
-        // Option adresse actuelle
-        Card(
-          elevation: 2,
-          child: RadioListTile<bool>(
-            title: const Text('Utiliser mon adresse actuelle'),
-            subtitle: const Text('tanghin, Ouagadougou'),
-            value: true,
-            groupValue: _useCurrentLocation,
-            onChanged: (value) {
-              setState(() {
-                _useCurrentLocation = value!;
-              });
-            },
-            activeColor: widget.serviceColor,
-            secondary: Icon(Icons.home, color: widget.serviceColor),
-          ),
-        ),
-        
-        // Option nouvelle adresse
-        Card(
-          elevation: 2,
-          child: RadioListTile<bool>(
-            title: const Text('Changer d\'adresse'),
-            subtitle: Text(
-              _useCurrentLocation ? '' : 'Nouvelle adresse de livraison',
-              style: TextStyle(
-                color: _useCurrentLocation ? Colors.grey : null,
-              ),
+          // Option adresse actuelle
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            value: false,
-            groupValue: _useCurrentLocation,
-            onChanged: (value) {
-              setState(() {
-                _useCurrentLocation = value!;
-              });
-            },
-            activeColor: widget.serviceColor,
-            secondary: Icon(Icons.edit_location, color: widget.serviceColor),
+            child: RadioListTile<bool>(
+              title: const Text('Utiliser mon adresse actuelle', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: _isLoadingLocation
+                  ? const Text('Recherche de votre position...', style: TextStyle(fontSize: 13, color: Colors.blue))
+                  : Text(
+                      _currentPosition != null 
+                          ? (_newAddress ?? 'Position GPS trouvée')
+                          : 'Impossible de trouver la position',
+                      style: TextStyle(fontSize: 13, color: _currentPosition != null ? Colors.green : Colors.orange),
+                    ),
+              value: true,
+              groupValue: _useCurrentLocation,
+              onChanged: (value) {
+                setState(() {
+                  _useCurrentLocation = value!;
+                });
+              },
+              activeColor: widget.serviceColor,
+              secondary: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: widget.serviceColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10)
+                  ),
+                  child: Icon(Icons.home, color: widget.serviceColor)
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
           ),
-        ),
+          
+          const SizedBox(height: 12),
+
+          // Option nouvelle adresse
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: RadioListTile<bool>(
+              title: const Text('Changer d\'adresse', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                _useCurrentLocation ? '' : 'Nouvelle adresse de livraison',
+                style: TextStyle(
+                  color: _useCurrentLocation ? Colors.grey : null,
+                  fontSize: 13
+                ),
+              ),
+              value: false,
+              groupValue: _useCurrentLocation,
+              onChanged: (value) {
+                setState(() {
+                  _useCurrentLocation = value!;
+                });
+              },
+              activeColor: widget.serviceColor,
+              secondary: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10)
+                  ),
+                  child: Icon(Icons.edit_location, color: Colors.grey.shade700)
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
         
         // Champ pour nouvelle adresse
         if (!_useCurrentLocation) ...[
@@ -438,12 +576,21 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
           width: double.infinity,
           height: 200,
           decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: _housePhoto != null ? widget.serviceColor : Colors.grey.shade300,
-              style: BorderStyle.solid,
+              style: _housePhoto != null ? BorderStyle.solid : BorderStyle.none,
               width: 2,
             ),
-            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              if (_housePhoto == null)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                )
+            ],
           ),
           child: _housePhoto != null
               ? Stack(
@@ -568,26 +715,6 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
   }
 
   Widget _buildValidateButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _validateOrder,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: widget.serviceColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const Text(
-          'Valider la localisation',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+    return Container(); // Removed, in footer
   }
 }

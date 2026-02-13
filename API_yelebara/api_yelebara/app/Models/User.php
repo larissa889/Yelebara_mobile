@@ -18,11 +18,15 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
-        'address1',
-        'address2',
         'phone2',
         'zone',
-        'photo'
+        'city',
+        'quartier',
+        'photo',
+        'latitude',
+        'longitude',
+        'is_online',
+        'current_order_id'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -30,6 +34,9 @@ class User extends Authenticatable
     protected $casts = [
         'validated_at' => 'datetime',
         'email_verified_at' => 'datetime',
+        'is_online' => 'boolean',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
     ];
 
     public function isPending()
@@ -61,5 +68,10 @@ class User extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function assignedOrders()
+    {
+        return $this->hasMany(Order::class, 'presseur_id');
     }
 }

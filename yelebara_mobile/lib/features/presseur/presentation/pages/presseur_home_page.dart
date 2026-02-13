@@ -8,6 +8,8 @@ import 'package:photo_view/photo_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yelebara_mobile/features/auth/presentation/controllers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yelebara_mobile/features/orders/domain/entities/order_entity.dart';
+import 'package:yelebara_mobile/features/orders/presentation/providers/order_provider.dart';
 
 // models
 class Order {
@@ -71,16 +73,21 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
   void initState() {
     super.initState();
     _loadCoveredZones();
+    // Load orders on init
+    Future.microtask(() => ref.read(orderProvider.notifier).loadOrders());
   }
 
   Future<void> _loadCoveredZones() async {
     final prefs = await SharedPreferences.getInstance();
-    final zonesJson = prefs.getString('zones') ?? '[{"id": "1", "name": "Ouaga 2000", "status": "active"}, {"id": "2", "name": "Zone du Bois", "status": "active"}, {"id": "3", "name": "Gounghin", "status": "active"}]';
+    final zonesJson = prefs.getString('zones') ??
+        '[{"id": "1", "name": "Ouaga 2000", "status": "active"}, {"id": "2", "name": "Zone du Bois", "status": "active"}, {"id": "3", "name": "Gounghin", "status": "active"}]';
     try {
       final List<dynamic> zonesList = json.decode(zonesJson);
-      final activeZones = zonesList.where((zone) => zone["status"] == "active").toList();
-      final zoneNames = activeZones.map((zone) => zone["name"].toString()).toList();
-      
+      final activeZones =
+          zonesList.where((zone) => zone["status"] == "active").toList();
+      final zoneNames =
+          activeZones.map((zone) => zone["name"].toString()).toList();
+
       if (mounted) {
         setState(() {
           _coveredZones = zoneNames.join(', ');
@@ -99,7 +106,14 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         foregroundColor: Colors.orange.shade700,
+        title: _currentIndex == 0 ? const Text('Commandes Attribuées') : null,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.read(orderProvider.notifier).loadOrders();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
@@ -107,7 +121,8 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Déconnexion'),
-                  content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+                  content:
+                      const Text('Voulez-vous vraiment vous déconnecter ?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -121,7 +136,8 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
                           context.go('/login');
                         }
                       },
-                      child: const Text('Confirmer', style: TextStyle(color: Colors.red)),
+                      child: const Text('Confirmer',
+                          style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -138,7 +154,8 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
         unselectedItemColor: Colors.grey,
         onTap: (i) => setState(() => _currentIndex = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Commandes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long), label: 'Commandes'),
           BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Clients'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Stats'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
@@ -146,103 +163,88 @@ class _PresseurHomePageState extends ConsumerState<PresseurHomePage> {
       ),
     );
   }
-
-  String _titleForIndex(int i) {
-    switch (i) {
-      case 0:
-        return 'Commandes';
-      case 1:
-        return 'Clients';
-      case 2:
-        return 'Statistiques';
-      case 3:
-        return 'Mon profil';
-      default:
-        return '';
-    }
-  }
 }
 
-// page commandes 
-class _PresserOrdersPage extends StatefulWidget {
+// page commandes
+class _PresserOrdersPage extends ConsumerWidget {
   const _PresserOrdersPage({Key? key}) : super(key: key);
 
   @override
-  State<_PresserOrdersPage> createState() => _PresserOrdersPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orderState = ref.watch(orderProvider);
 
-class _PresserOrdersPageState extends State<_PresserOrdersPage> {
-  // Données mockées
-  List<Order> orders = [
-    Order(
-      id: '1',
-      clientName: 'Amadou Diallo',
-      serviceType: 'Lavage + Repassage',
-      status: 'En attente',
-      address: 'Ouaga 2000, Secteur 15',
-      price: 5000,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    Order(
-      id: '2',
-      clientName: 'Fatima Ouédraogo',
-      serviceType: 'Repassage uniquement',
-      status: 'En cours',
-      address: 'Zone du Bois, Secteur 10',
-      price: 3000,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Order(
-      id: '3',
-      clientName: 'Ibrahim Kaboré',
-      serviceType: 'Lavage express',
-      status: 'Prête',
-      address: 'Gounghin, Secteur 5',
-      price: 4500,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+    if (orderState.isLoading && orderState.orders.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  @override
-  Widget build(BuildContext context) {
+    if (orderState.orders.isEmpty) {
+      return const Center(child: Text("Aucune commande assignée pour le moment."));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: orders.length,
+      itemCount: orderState.orders.length,
       itemBuilder: (context, index) {
-        final order = orders[index];
+        final order = orderState.orders[index];
         return _OrderCard(
           order: order,
-          onAccept: () => _updateOrderStatus(order.id, 'En cours'),
-          onReject: () => _updateOrderStatus(order.id, 'Refusée'),
-          onComplete: () => _updateOrderStatus(order.id, 'Livrée'),
+          onAccept: () => _updateOrderStatus(context, ref, order, OrderStatus.processing),
+          onReject: () => _updateOrderStatus(context, ref, order, OrderStatus.cancelled), // Or specific rejected status
+          onComplete: () => _showCompleteDialog(context, ref, order),
         );
       },
     );
   }
 
-  void _updateOrderStatus(String orderId, String newStatus) {
-    setState(() {
-      final index = orders.indexWhere((o) => o.id == orderId);
-      if (index != -1) {
-        orders[index] = Order(
-          id: orders[index].id,
-          clientName: orders[index].clientName,
-          serviceType: orders[index].serviceType,
-          status: newStatus,
-          address: orders[index].address,
-          price: orders[index].price,
-          createdAt: orders[index].createdAt,
-        );
-      }
-    });
+  void _updateOrderStatus(BuildContext context, WidgetRef ref, OrderEntity order, OrderStatus newStatus) {
+    ref.read(orderProvider.notifier).updateOrder(order.copyWith(status: newStatus));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Commande mise à jour: $newStatus')),
+      SnackBar(content: Text('Statut mis à jour: ${newStatus.name}')),
+    );
+  }
+
+  void _showCompleteDialog(BuildContext context, WidgetRef ref, OrderEntity order) {
+    final weightController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terminer la commande'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Veuillez entrer le poids du linge (kg):'),
+            TextField(
+              controller: weightController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(suffixText: 'kg'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              final weight = double.tryParse(weightController.text);
+              if (weight != null) {
+                ref.read(orderProvider.notifier).updateOrder(
+                      order.copyWith(status: OrderStatus.completed, weight: weight),
+                    );
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Commande terminée avec succès !')),
+                );
+              }
+            },
+            child: const Text('Valider'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _OrderCard extends StatelessWidget {
-  final Order order;
+  final OrderEntity order;
   final VoidCallback onAccept;
   final VoidCallback onReject;
   final VoidCallback onComplete;
@@ -271,7 +273,10 @@ class _OrderCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    order.clientName,
+                    // Fallback since client name isn't directly in OrderEntity yet, 
+                    // ideally fetched via relation or stored in entity.
+                    // For now, displaying ID.
+                    'Client #${order.id}', 
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -284,14 +289,37 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.cleaning_services, size: 16, color: Colors.grey[600]),
+                Icon(order.serviceIcon, size: 16, color: Colors.grey[600]), // Use icon from entity
                 const SizedBox(width: 6),
                 Text(
-                  order.serviceType,
+                  order.serviceTitle,
                   style: TextStyle(color: Colors.grey[700]),
                 ),
               ],
             ),
+            if (order.items != null && order.items!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Détails de la commande:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              ...order.items!.map((item) {
+                final name = item['name'] ?? 'Article inconnu';
+                final qty = item['quantity'] ?? 0;
+                final weight = item['weight'] ?? 0.0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Text('• $qty x $name', style: TextStyle(color: Colors.grey[800], fontSize: 13)),
+                      const Spacer(),
+                      Text('${weight}kg', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
             const SizedBox(height: 4),
             Row(
               children: [
@@ -299,19 +327,37 @@ class _OrderCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    order.address,
+                    // Address isn't in OrderEntity. Using instructions or placeholders?
+                    // Ideally pass address in OrderEntity.
+                    // For now, show coordinates if available or instructions.
+                    order.pickupLatitude != null 
+                        ? 'GPS: ${order.pickupLatitude}, ${order.pickupLongitude}' 
+                        : (order.instructions.isNotEmpty ? order.instructions : 'Adresse non spécifiée'),
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                 ),
               ],
             ),
+             if (order.weight != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.scale, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Poids: ${order.weight} kg',
+                    style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 4),
             Row(
               children: [
                 Icon(Icons.payments, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 6),
                 Text(
-                  '${order.price.toStringAsFixed(0)} FCFA',
+                  '${order.amount.toStringAsFixed(0)} FCFA',
                   style: TextStyle(
                     color: Colors.orange.shade700,
                     fontWeight: FontWeight.bold,
@@ -328,7 +374,7 @@ class _OrderCard extends StatelessWidget {
   }
 
   Widget _buildActionButtons() {
-    if (order.status == 'En attente') {
+    if (order.status == OrderStatus.assigned) {
       return Row(
         children: [
           Expanded(
@@ -356,13 +402,14 @@ class _OrderCard extends StatelessWidget {
           ),
         ],
       );
-    } else if (order.status == 'Prête') {
-      return SizedBox(
+    } else if (order.status == OrderStatus.processing || order.status == OrderStatus.assigned || order.status == OrderStatus.pending) { 
+      // Allow completion if processing or if stuck in pending/assigned for demo
+       return SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: onComplete,
           icon: const Icon(Icons.local_shipping, size: 18),
-          label: const Text('Marquer comme livrée'),
+          label: const Text('Terminer & Peser'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange.shade700,
             foregroundColor: Colors.white,
@@ -375,7 +422,7 @@ class _OrderCard extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  final String status;
+  final OrderStatus status;
 
   const _StatusBadge({Key? key, required this.status}) : super(key: key);
 
@@ -383,25 +430,32 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     Color backgroundColor;
     Color textColor = Colors.white;
+    String text;
 
     switch (status) {
-      case 'En attente':
+      case OrderStatus.pending:
         backgroundColor = Colors.orange;
+        text = 'En attente';
         break;
-      case 'En cours':
+      case OrderStatus.assigned:
         backgroundColor = Colors.blue;
+        text = 'Assignée';
         break;
-      case 'Prête':
+      case OrderStatus.processing:
+        backgroundColor = Colors.blueAccent;
+        text = 'En traitement';
+        break;
+      case OrderStatus.completed:
         backgroundColor = Colors.green;
+        text = 'Terminée';
         break;
-      case 'Livrée':
-        backgroundColor = Colors.grey;
-        break;
-      case 'Refusée':
+      case OrderStatus.cancelled:
         backgroundColor = Colors.red;
+        text = 'Annulée';
         break;
       default:
         backgroundColor = Colors.grey;
+        text = status.name;
     }
 
     return Container(
@@ -411,7 +465,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status,
+        text,
         style: TextStyle(
           color: textColor,
           fontSize: 12,

@@ -15,11 +15,32 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. Client de test
+        User::updateOrCreate(
+            ['email' => 'client@test.com'],
+            [
+                'name' => 'Client Test',
+                'phone' => '+22670000001', // Numéro valide commençant par 7
+                'password' => bcrypt('password'),
+                'role' => 'client',
+                'status' => 'active',
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // 2. Presseur de test (disponible et proche de Tanghin)
+        User::updateOrCreate(
+            ['email' => 'presseur@test.com'],
+            [
+                'name' => 'Presseur Test',
+                'phone' => '+22670000002', // Numéro valide commençant par 7
+                'password' => bcrypt('password'),
+                'role' => 'presseur',
+                'status' => 'active',
+                'is_online' => true,
+                'current_order_id' => null,
+                'latitude' => 12.3957, // Lat approximative de Tanghin/Ouaga
+                'longitude' => -1.5003, // Long approximative de Tanghin/Ouaga
+            ]
+        );
     }
 }

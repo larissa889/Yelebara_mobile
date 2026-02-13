@@ -38,7 +38,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
                 response.data['success'] == false)) {
           throw Exception(response.data['message'] ?? 'Échec de la connexion');
         }
-        return UserModel.fromJson(response.data['user'] ?? response.data);
+        final userData = Map<String, dynamic>.from(response.data['user']);
+        userData['token'] = response.data['token'];
+        return UserModel.fromJson(userData);
       } else {
         throw Exception('Échec de la connexion: ${response.statusCode}');
       }
@@ -63,7 +65,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       if (response.statusCode == 200) {
         if (response.data['success'] == true) {
-           return UserModel.fromJson(response.data['user']);
+           final userData = Map<String, dynamic>.from(response.data['user']);
+        userData['token'] = response.data['token'];
+        return UserModel.fromJson(userData);
         }
         throw Exception(response.data['message'] ?? 'Erreur lors de la mise à jour');
       }
@@ -103,7 +107,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           throw Exception(
               response.data['message'] ?? 'Échec de l\'inscription');
         }
-        return UserModel.fromJson(response.data['user'] ?? response.data);
+        final userData = Map<String, dynamic>.from(response.data['user']);
+        userData['token'] = response.data['token'];
+        return UserModel.fromJson(userData);
       } else {
         throw Exception('Échec de l\'inscription: ${response.statusCode}');
       }

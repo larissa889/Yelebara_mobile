@@ -55,8 +55,25 @@ class OrderRemoteDataSourceImpl implements OrderRemoteDataSource {
   // but we keep the interface for future use or basic mocking.
   @override
   Future<OrderModel> updateOrder(OrderModel order) async {
-    // Placeholder - Logic to be implemented on backend
-    return order; 
+    try {
+      final response = await dio.put(
+        '/orders/${order.id}',
+        data: {
+          'status': order.status.name, // Sending status string
+          if (order.weight != null) 'weight': order.weight,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['success'] == true) {
+          return OrderModel.fromJson(data['order']);
+        }
+      }
+      throw Exception('Erreur lors de la mise à jour de la commande');
+    } on DioException catch (e) {
+      throw Exception('Erreur réseau: ${e.message}');
+    }
   }
 
   @override

@@ -146,18 +146,21 @@ class HomeDrawer extends ConsumerWidget {
                     Navigator.pop(context); // Close drawer
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (dialogContext) => AlertDialog(
                         title: const Text('Déconnexion'),
                         content: const Text('Voulez-vous vraiment vous déconnecter ?'),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pop(dialogContext),
                             child: const Text('Annuler'),
                           ),
                           TextButton(
                             onPressed: () async {
-                              Navigator.pop(context); // Close dialog
+                              // Close dialog first
+                              Navigator.pop(dialogContext);
+                              // Perform logout
                               await ref.read(authProvider.notifier).logout();
+                              // Navigate to login - using context from outer scope
                               if (context.mounted) {
                                 context.go('/login');
                               }
